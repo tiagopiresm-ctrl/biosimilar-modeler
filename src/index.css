@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans antialiased m-0;
+  }
+}
+
+@layer components {
+  .input-cell {
+    @apply bg-blue-50 border border-blue-200 text-blue-900 text-right px-2 py-1 text-sm font-mono
+           focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+           hover:bg-blue-100 transition-colors cursor-text;
+  }
+  .formula-cell {
+    @apply text-right px-2 py-1 text-sm font-mono bg-white;
+  }
+  .header-cell {
+    @apply px-2 py-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-100 border-b border-gray-200;
+  }
+  .row-label {
+    @apply px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border-r border-gray-100 whitespace-nowrap;
+  }
+  .section-header {
+    @apply px-3 py-2 text-sm font-bold text-gray-800 bg-gray-50 border-y border-gray-200;
+  }
+  .kpi-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow;
+  }
+  .nav-item {
+    @apply flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer;
+  }
+  .nav-item-active {
+    @apply bg-blue-50 text-blue-700 font-medium;
+  }
+  .nav-item-inactive {
+    @apply text-gray-600 hover:bg-gray-100 hover:text-gray-900;
+  }
+}
