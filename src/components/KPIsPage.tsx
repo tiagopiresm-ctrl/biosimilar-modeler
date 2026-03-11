@@ -65,7 +65,7 @@ export function KPIsPage() {
   const pc = computePeriodConfig(config);
   const periodLabels = generatePeriodLabels(pc);
   const earliestLoeIdx = getEarliestLoeIndex(countries, pc.startYear);
-  const loe5Index = earliestLoeIdx + 5;
+  const loe5Index = Math.min(earliestLoeIdx + 5, pc.numPeriods - 1);
   const lastIndex = pc.numPeriods - 1;
 
   const ccy = config.currency;

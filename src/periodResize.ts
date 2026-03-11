@@ -95,6 +95,7 @@ export function resizeCountry(
     partnerGtnPct: resizeScenarioRow(c.partnerGtnPct, oldPc, newPc, 0),
     supplyPricePct: resizeScenarioRow(c.supplyPricePct, oldPc, newPc, 0),
     royaltyRatePct: resizeScenarioRow(c.royaltyRatePct, oldPc, newPc, 0),
+    fixedSupplyPricePerGram: resizeScenarioRow(c.fixedSupplyPricePerGram, oldPc, newPc, 0),
     atcClassGrowth: resizeScenarioRow(c.atcClassGrowth, oldPc, newPc, 0.03),
     biosimilarLaunchPeriodIndex: shiftPeriodIndex(c.biosimilarLaunchPeriodIndex, oldPc, newPc),
     genericCompetitors: c.genericCompetitors.map(g => resizeGenericCompetitor(g, oldPc, newPc)),

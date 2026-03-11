@@ -177,6 +177,7 @@ function flattenToBase(state: ModelState): Partial<ModelState> {
     biosimilarMarketShare: flatRow(c.biosimilarMarketShare),
     partnerGtnPct: flatRow(c.partnerGtnPct),
     supplyPricePct: flatRow(c.supplyPricePct),
+    fixedSupplyPricePerGram: flatRow(c.fixedSupplyPricePerGram),
     royaltyRatePct: flatRow(c.royaltyRatePct),
     genericCompetitors: c.genericCompetitors.map(g => ({
       ...g,

@@ -405,7 +405,7 @@ export function SetupPage() {
                   {country.name}
                 </span>
                 <span className="text-xs text-gray-400">
-                  {country.localCurrency} | FX: {country.fxRate[0].toFixed(2)} | LOE: {country.loeYear} | Generics at LOE:{' '}
+                  {country.localCurrency} | FX: {(country.fxRate[0] ?? 1).toFixed(2)} | LOE: {country.loeYear} | Generics at LOE:{' '}
                   {country.numGenericsAtLOE}
                 </span>
                 <button

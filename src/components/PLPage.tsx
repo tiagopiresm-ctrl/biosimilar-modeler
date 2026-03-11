@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { useStore } from '../store';
 import { PageHeader, ScenarioSelector } from './Layout';
 import { FormulaCell } from './EditableCell';
@@ -124,7 +124,7 @@ export function PLPage() {
           </thead>
           <tbody>
             {sections.map((section, si) => (
-              <>
+              <Fragment key={si}>
                 <tr key={`section-${si}`}>
                   <td colSpan={pc.numPeriods + 2} className="section-header">{section.title}</td>
                 </tr>
@@ -146,7 +146,7 @@ export function PLPage() {
                     ))}
                   </tr>
                 ))}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

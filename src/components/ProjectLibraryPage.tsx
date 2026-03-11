@@ -272,6 +272,7 @@ export function ProjectLibraryPage() {
       setLoading(true);
       const json = await readProjectFile(dirHandle, fileName);
       importJSON(json);
+      setLoading(false);
       setPage('setup');
     } catch (err) {
       alert('Failed to load project.');
