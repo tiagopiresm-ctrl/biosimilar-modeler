@@ -105,8 +105,6 @@ function buildCountryModelSheet(
       const generic = generics[g];
       const gOut = co.genericOutputs[g];
       const gLaunch = generic.launchPeriodIndex;
-      const launchRef = cellMap.getScalar(inputKey, `generic_${g}_launchPeriod`).toFormula();
-
       // Generic share
       writeFormulaRow(ws, row, `Generic ${g + 1} Share`, NP, (p) => {
         if (p < gLaunch) return '0';

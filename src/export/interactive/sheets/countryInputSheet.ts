@@ -12,9 +12,9 @@ import type { CellMap } from '../cellMap';
 import type { CountryAssumptions, GenericCompetitor } from '../../../types';
 import { NUM_FMT } from '../../excelStyles';
 import {
-  INPUT_FILL, ACTIVE_ROW_FILL,
-  cellAddr, periodCol,
-  chooseScenario, formulaValue,
+  INPUT_FILL,
+  cellAddr,
+
   writeScenarioBlock, writeInputRow, writeSection,
   setupSheet, writePeriodHeader,
 } from '../formulaHelpers';

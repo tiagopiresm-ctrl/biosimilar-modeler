@@ -9,7 +9,7 @@ import { INPUT_FILL } from '../formulaHelpers';
 import { formulaValue } from '../formulaHelpers';
 import {
   HEADER_FONT, HEADER_FILL, LABEL_FONT, BOLD_VALUE_FONT,
-  CENTER_ALIGN, THIN_BORDER, NUM_FMT,
+  NUM_FMT,
   styleSectionRow,
 } from '../../excelStyles';
 

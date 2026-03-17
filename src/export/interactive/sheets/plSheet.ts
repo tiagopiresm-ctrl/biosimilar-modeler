@@ -22,7 +22,7 @@ export function addInteractivePLSheet(
 ): void {
   const ws = wb.addWorksheet('P&L');
   const sheetKey = 'pl';
-  const { countries, countryOutputs, plOutputs, config, periodLabels, periodConfig } = ctx;
+  const { countries, plOutputs, config, periodLabels, periodConfig } = ctx;
 
   const NP = periodLabels.length;
   const colCount = NP + 1;

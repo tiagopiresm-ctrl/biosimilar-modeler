@@ -24,7 +24,7 @@ export function addInteractiveNPVSheet(
 ): void {
   const ws = wb.addWorksheet('NPV Analysis');
   const sheetKey = 'npv';
-  const { countries, npvOutputs, plOutputs, periodLabels, periodConfig } = ctx;
+  const { countries, npvOutputs, periodLabels, periodConfig } = ctx;
 
   const NP = periodLabels.length;
   const colCount = NP + 1;
