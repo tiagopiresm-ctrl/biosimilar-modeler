@@ -4,10 +4,15 @@ import { SCENARIO_LABELS } from '../types';
 import {
   Settings, Table2, Globe, FileText, BarChart3, Calculator,
   TrendingUp, Target, GitBranch, PieChart, ChevronDown, ChevronRight,
-  Download, Upload, FolderOpen,
+  Download, Upload, FolderOpen, HardDrive,
 } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { ExportButtons } from '../export/ExportButtons';
+import {
+  isFileSystemAccessSupported,
+  saveJsonToFileSystem,
+  openJsonFromFileSystem,
+} from '../fileSystem/fileSystemAccess';
 
 const navSections = [
   {
@@ -41,6 +46,8 @@ export function Sidebar() {
   const [countriesOpen, setCountriesOpen] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const hasFSAccess = isFileSystemAccessSupported();
+
   const handleExport = () => {
     const json = exportJSON();
     const blob = new Blob([json], { type: 'application/json' });
@@ -50,6 +57,26 @@ export function Sidebar() {
     a.download = `${config.moleculeName || 'biosimilar-model'}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleSaveTo = async () => {
+    const json = exportJSON();
+    const name = config.moleculeName || 'biosimilar-model';
+    const result = await saveJsonToFileSystem(json, name);
+    if (result.saved && result.fileName) {
+      // Brief success feedback (non-blocking)
+    }
+  };
+
+  const handleOpenFrom = async () => {
+    const result = await openJsonFromFileSystem();
+    if (result) {
+      try {
+        importJSON(result.content);
+      } catch {
+        alert('Invalid JSON file.');
+      }
+    }
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,14 +174,34 @@ export function Sidebar() {
           Project Library
         </button>
         <ExportButtons />
+        {hasFSAccess && (
+          <div className="flex gap-1.5">
+            <button
+              onClick={handleSaveTo}
+              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              title="Save to OneDrive, Teams, or local folder"
+            >
+              <HardDrive size={12} />
+              Save to...
+            </button>
+            <button
+              onClick={handleOpenFrom}
+              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-white text-blue-700 border border-blue-300 rounded hover:bg-blue-50 transition-colors"
+              title="Open from OneDrive, Teams, or local folder"
+            >
+              <FolderOpen size={12} />
+              Open from...
+            </button>
+          </div>
+        )}
         <div className="flex gap-1.5">
           <button
             onClick={handleExport}
             className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-gray-800 text-white rounded hover:bg-gray-900 transition-colors"
-            title="Export project as JSON file"
+            title="Download project as JSON file"
           >
             <Download size={12} />
-            Save Project
+            {hasFSAccess ? 'Download' : 'Save Project'}
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -162,7 +209,7 @@ export function Sidebar() {
             title="Import project from JSON file"
           >
             <Upload size={12} />
-            Load Project
+            {hasFSAccess ? 'Upload' : 'Load Project'}
           </button>
           <input
             ref={fileInputRef}

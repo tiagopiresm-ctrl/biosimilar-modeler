@@ -1,0 +1,279 @@
+// ──────────────────────────────────────────────────────────────
+// Interactive Excel — NPV Analysis (output) sheet builder
+// ──────────────────────────────────────────────────────────────
+// DCF, discounting, risk adjustment, and KPI scalars.
+// All cells use formulaValue — no editable inputs.
+// ──────────────────────────────────────────────────────────────
+
+import type { Workbook } from 'exceljs';
+import type { ExportContext } from '../../exportTypes';
+import type { CellMap } from '../cellMap';
+import { getEarliestLoeIndex } from '../../../types';
+import { NUM_FMT, LABEL_FONT, BOLD_VALUE_FONT } from '../../excelStyles';
+import {
+  cellAddr, periodCol,
+  formulaValue,
+  writeFormulaRow, writeSection,
+  setupSheet, writePeriodHeader,
+} from '../formulaHelpers';
+
+export function addInteractiveNPVSheet(
+  wb: Workbook,
+  ctx: ExportContext,
+  cellMap: CellMap,
+): void {
+  const ws = wb.addWorksheet('NPV Analysis');
+  const sheetKey = 'npv';
+  const { countries, npvOutputs, plOutputs, periodLabels, periodConfig } = ctx;
+
+  const NP = periodLabels.length;
+  const colCount = NP + 1;
+  const loeIdx = getEarliestLoeIndex(countries, periodConfig.startYear);
+
+  setupSheet(ws, NP);
+  writePeriodHeader(ws, periodLabels);
+
+  let row = 3;
+
+  // ════════════════════════════════════════════════════════════
+  // Section: DCF Components
+  // ════════════════════════════════════════════════════════════
+  writeSection(ws, row, 'DCF Components', colCount);
+  row++;
+
+  // EBIT (reference P&L)
+  writeFormulaRow(ws, row, 'EBIT', NP, (p) => {
+    return cellMap.get('pl', 'ebit', p).toFormula();
+  }, npvOutputs.ebit, cellMap, sheetKey, 'ebit', NUM_FMT.integer);
+  row++;
+
+  // D&A Add-Back (reference P&L)
+  writeFormulaRow(ws, row, 'D&A Add-Back', NP, (p) => {
+    return cellMap.get('pl', 'daAddBack', p).toFormula();
+  }, npvOutputs.daAddBack, cellMap, sheetKey, 'daAddBack', NUM_FMT.integer);
+  row++;
+
+  // Income Tax (reference P&L)
+  writeFormulaRow(ws, row, 'Income Tax', NP, (p) => {
+    return cellMap.get('pl', 'incomeTax', p).toFormula();
+  }, npvOutputs.incomeTax, cellMap, sheetKey, 'incomeTax', NUM_FMT.integer);
+  row++;
+
+  // WC Change (reference P&L)
+  writeFormulaRow(ws, row, 'Working Capital Change', NP, (p) => {
+    return cellMap.get('pl', 'wcChange', p).toFormula();
+  }, npvOutputs.wcChange, cellMap, sheetKey, 'wcChange', NUM_FMT.integer);
+  row++;
+
+  // CapEx (reference P&L)
+  writeFormulaRow(ws, row, 'Capital Expenditure', NP, (p) => {
+    return cellMap.get('pl', 'capex', p).toFormula();
+  }, npvOutputs.capex, cellMap, sheetKey, 'capex', NUM_FMT.integer);
+  row++;
+
+  // Free Cash Flow (reference P&L)
+  writeFormulaRow(ws, row, 'Free Cash Flow', NP, (p) => {
+    return cellMap.get('pl', 'fcf', p).toFormula();
+  }, npvOutputs.fcf, cellMap, sheetKey, 'fcf', NUM_FMT.integer, true);
+  row++;
+
+  // Cumulative FCF (reference P&L)
+  writeFormulaRow(ws, row, 'Cumulative FCF', NP, (p) => {
+    return cellMap.get('pl', 'cumulativeFCF', p).toFormula();
+  }, npvOutputs.cumulativeFCF, cellMap, sheetKey, 'cumulativeFCF', NUM_FMT.integer);
+  row++;
+
+  // Blank
+  row++;
+
+  // ════════════════════════════════════════════════════════════
+  // Section: Discounting
+  // ════════════════════════════════════════════════════════════
+  writeSection(ws, row, 'Discounting', colCount);
+  row++;
+
+  // Discount Rate (same value every period)
+  const waccRef = cellMap.getScalar('wacc', 'activeWACC').toFormula();
+
+  writeFormulaRow(ws, row, 'Discount Rate', NP, () => {
+    return waccRef;
+  }, npvOutputs.discountRate, cellMap, sheetKey, 'discountRate', NUM_FMT.percent);
+  row++;
+
+  // Discount Factor — anchored at LOE
+  writeFormulaRow(ws, row, 'Discount Factor', NP, (p) => {
+    if (p === loeIdx) return '1';
+    if (p > loeIdx) {
+      const prevDF = cellAddr(row, periodCol(p - 1));
+      return `${prevDF}/(1+${waccRef})`;
+    }
+    // p < loeIdx
+    const nextDF = cellAddr(row, periodCol(p + 1));
+    return `${nextDF}*(1+${waccRef})`;
+  }, npvOutputs.discountFactor, cellMap, sheetKey, 'discountFactor', NUM_FMT.decimal2);
+  row++;
+
+  // Discounted FCF
+  writeFormulaRow(ws, row, 'Discounted FCF', NP, (p) => {
+    const fcf = cellMap.get(sheetKey, 'fcf', p).toLocal();
+    const df = cellMap.get(sheetKey, 'discountFactor', p).toLocal();
+    return `${fcf}*${df}`;
+  }, npvOutputs.discountedFCF, cellMap, sheetKey, 'discountedFCF', NUM_FMT.integer);
+  row++;
+
+  // Cumulative Discounted FCF
+  writeFormulaRow(ws, row, 'Cumulative Discounted FCF', NP, (p) => {
+    const dFcf = cellMap.get(sheetKey, 'discountedFCF', p).toLocal();
+    if (p === 0) return dFcf;
+    const prev = cellMap.get(sheetKey, 'cumulativeDiscountedFCF', p - 1).toLocal();
+    return `${prev}+${dFcf}`;
+  }, npvOutputs.cumulativeDiscountedFCF, cellMap, sheetKey, 'cumulativeDiscountedFCF', NUM_FMT.integer);
+  row++;
+
+  // Blank
+  row++;
+
+  // ════════════════════════════════════════════════════════════
+  // Section: Risk Adjustment
+  // ════════════════════════════════════════════════════════════
+  writeSection(ws, row, 'Risk Adjustment', colCount);
+  row++;
+
+  // Cumulative PoS (reference NPV Risk sheet)
+  writeFormulaRow(ws, row, 'Cumulative PoS', NP, (p) => {
+    return cellMap.get('npvRisk', 'cumulativePoS', p).toFormula();
+  }, ctx.npvRisk.cumulativePoS, cellMap, sheetKey, 'riskPoS', NUM_FMT.percent);
+  row++;
+
+  // Risk-Adj FCF
+  writeFormulaRow(ws, row, 'Risk-Adj FCF', NP, (p) => {
+    const fcf = cellMap.get(sheetKey, 'fcf', p).toLocal();
+    const pos = cellMap.get(sheetKey, 'riskPoS', p).toLocal();
+    return `${fcf}*${pos}`;
+  }, npvOutputs.riskAdjustedFCF, cellMap, sheetKey, 'riskAdjFCF', NUM_FMT.integer);
+  row++;
+
+  // Risk-Adj Discounted FCF
+  writeFormulaRow(ws, row, 'Risk-Adj Discounted FCF', NP, (p) => {
+    const rFcf = cellMap.get(sheetKey, 'riskAdjFCF', p).toLocal();
+    const df = cellMap.get(sheetKey, 'discountFactor', p).toLocal();
+    return `${rFcf}*${df}`;
+  }, npvOutputs.riskAdjustedDiscountedFCF, cellMap, sheetKey, 'riskAdjDiscFCF', NUM_FMT.integer);
+  row++;
+
+  // Cumulative Risk-Adj Discounted FCF
+  writeFormulaRow(ws, row, 'Cum Risk-Adj Disc FCF', NP, (p) => {
+    const rdf = cellMap.get(sheetKey, 'riskAdjDiscFCF', p).toLocal();
+    if (p === 0) return rdf;
+    const prev = cellMap.get(sheetKey, 'cumRiskAdjDiscFCF', p - 1).toLocal();
+    return `${prev}+${rdf}`;
+  }, npvOutputs.cumulativeRiskAdjDiscountedFCF, cellMap, sheetKey, 'cumRiskAdjDiscFCF', NUM_FMT.integer);
+  row++;
+
+  // Blank
+  row++;
+  row++;
+
+  // ════════════════════════════════════════════════════════════
+  // Section: KPIs (scalar values below period data)
+  // ════════════════════════════════════════════════════════════
+  writeSection(ws, row, 'Key Performance Indicators', colCount);
+  row++;
+
+  // Helper: range string for a field across all periods
+  const rangeStr = (field: string): string => {
+    const firstRef = cellMap.get(sheetKey, field, 0).toLocal();
+    const lastRef = cellMap.get(sheetKey, field, NP - 1).toLocal();
+    return `${firstRef}:${lastRef}`;
+  };
+
+  // NPV
+  const npvLabel = ws.getCell(row, 1);
+  npvLabel.value = 'NPV';
+  npvLabel.font = BOLD_VALUE_FONT;
+  const npvCell = ws.getCell(row, 2);
+  npvCell.value = formulaValue(`SUM(${rangeStr('discountedFCF')})`, npvOutputs.npv);
+  npvCell.numFmt = NUM_FMT.integer;
+  npvCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'npvValue', ws.name, cellAddr(row, 2));
+  row++;
+
+  // rNPV
+  const rnpvLabel = ws.getCell(row, 1);
+  rnpvLabel.value = 'rNPV';
+  rnpvLabel.font = BOLD_VALUE_FONT;
+  const rnpvCell = ws.getCell(row, 2);
+  rnpvCell.value = formulaValue(`SUM(${rangeStr('riskAdjDiscFCF')})`, npvOutputs.rnpv);
+  rnpvCell.numFmt = NUM_FMT.integer;
+  rnpvCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'rnpvValue', ws.name, cellAddr(row, 2));
+  row++;
+
+  // IRR
+  const irrLabel = ws.getCell(row, 1);
+  irrLabel.value = 'IRR';
+  irrLabel.font = BOLD_VALUE_FONT;
+  const irrCell = ws.getCell(row, 2);
+  const irrCached = npvOutputs.irr ?? 0;
+  irrCell.value = formulaValue(`IFERROR(IRR(${rangeStr('fcf')}),"N/A")`, irrCached);
+  irrCell.numFmt = NUM_FMT.percent;
+  irrCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'irr', ws.name, cellAddr(row, 2));
+  row++;
+
+  // rIRR
+  const rirrLabel = ws.getCell(row, 1);
+  rirrLabel.value = 'rIRR';
+  rirrLabel.font = BOLD_VALUE_FONT;
+  const rirrCell = ws.getCell(row, 2);
+  const rirrCached = npvOutputs.rirr ?? 0;
+  rirrCell.value = formulaValue(`IFERROR(IRR(${rangeStr('riskAdjFCF')}),"N/A")`, rirrCached);
+  rirrCell.numFmt = NUM_FMT.percent;
+  rirrCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'rirr', ws.name, cellAddr(row, 2));
+  row++;
+
+  // Money at Risk
+  const marLabel = ws.getCell(row, 1);
+  marLabel.value = 'Money at Risk';
+  marLabel.font = BOLD_VALUE_FONT;
+  const marCell = ws.getCell(row, 2);
+  marCell.value = formulaValue(`MIN(${rangeStr('cumulativeFCF')})`, npvOutputs.moneyAtRisk);
+  marCell.numFmt = NUM_FMT.integer;
+  marCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'moneyAtRisk', ws.name, cellAddr(row, 2));
+  row++;
+
+  // Funding Need
+  const fnLabel = ws.getCell(row, 1);
+  fnLabel.value = 'Funding Need';
+  fnLabel.font = BOLD_VALUE_FONT;
+  const fnCell = ws.getCell(row, 2);
+  fnCell.value = formulaValue(`MIN(${rangeStr('fcf')})`, npvOutputs.fundingNeed);
+  fnCell.numFmt = NUM_FMT.integer;
+  fnCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'fundingNeed', ws.name, cellAddr(row, 2));
+  row++;
+
+  // Payback Undiscounted (cached value — array formulas are complex in ExcelJS)
+  const pbLabel = ws.getCell(row, 1);
+  pbLabel.value = 'Payback Year (Undiscounted)';
+  pbLabel.font = LABEL_FONT;
+  const pbCell = ws.getCell(row, 2);
+  pbCell.value = npvOutputs.paybackUndiscounted ?? 'N/A';
+  pbCell.numFmt = NUM_FMT.year;
+  pbCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'paybackUndiscounted', ws.name, cellAddr(row, 2));
+  row++;
+
+  // Payback Discounted (cached value)
+  const pbdLabel = ws.getCell(row, 1);
+  pbdLabel.value = 'Payback Year (Discounted)';
+  pbdLabel.font = LABEL_FONT;
+  const pbdCell = ws.getCell(row, 2);
+  pbdCell.value = npvOutputs.paybackDiscounted ?? 'N/A';
+  pbdCell.numFmt = NUM_FMT.year;
+  pbdCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'paybackDiscounted', ws.name, cellAddr(row, 2));
+  row++;
+}
