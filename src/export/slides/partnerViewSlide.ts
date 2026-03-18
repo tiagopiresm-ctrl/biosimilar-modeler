@@ -1,8 +1,15 @@
-// Partner View slide — NPV comparison: Company vs Partner
+// Slide 9: Partner View — NPV comparison bar chart + KPI cards
 
 import type PptxGenJS from 'pptxgenjs';
 import type { ExportContext } from '../exportTypes';
 import { formatCurrency, formatPercent } from '../../calculations';
+
+const DARK_BLUE = '1F4E79';
+const BLUE = '2E75B6';
+const ORANGE = 'ED7D31';
+const CARD_BG = 'F2F2F2';
+const CARD_BORDER = 'D9D9D9';
+const GRAY = '808080';
 
 export function addPartnerViewSlide(pptx: PptxGenJS, ctx: ExportContext): void {
   const { partnerViewOutputs, npvOutputs, config } = ctx;
@@ -11,15 +18,15 @@ export function addPartnerViewSlide(pptx: PptxGenJS, ctx: ExportContext): void {
   const slide = pptx.addSlide();
   const ccy = config.currency;
 
-  // ── Title bar ──
-  slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.7, fill: { color: '1F3864' } });
+  // ── Title bar ──────────────────────────────────────────────
+  slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.6, fill: { color: DARK_BLUE } });
   slide.addText('Partner View \u2014 NPV Comparison', {
-    x: 0.5, y: 0.1, w: 9, h: 0.5,
+    x: 0.4, y: 0.08, w: 9, h: 0.44,
     fontSize: 18, fontFace: 'Calibri', bold: true, color: 'FFFFFF',
   });
 
-  // ── LEFT SIDE — 4 KPI cards (2×2 grid) ──
-  const kpis: { label: string; value: string }[] = [
+  // ── LEFT — KPI cards (2x2 grid) ────────────────────────────
+  const kpis = [
     { label: 'Company NPV', value: formatCurrency(npvOutputs.npv, ccy) },
     { label: 'Partner NPV', value: formatCurrency(partnerViewOutputs.partnerNPV, ccy) },
     { label: 'Company Share', value: formatPercent(partnerViewOutputs.companyNPVShare) },
@@ -31,8 +38,8 @@ export function addPartnerViewSlide(pptx: PptxGenJS, ctx: ExportContext): void {
   const cardH = 0.85;
   const startX = 0.3;
   const startY = 1.0;
-  const gapX = 0.2;
-  const gapY = 0.18;
+  const gapX = 0.15;
+  const gapY = 0.15;
 
   kpis.forEach((kpi, i) => {
     const col = i % cols;
@@ -40,40 +47,34 @@ export function addPartnerViewSlide(pptx: PptxGenJS, ctx: ExportContext): void {
     const x = startX + col * (cardW + gapX);
     const y = startY + row * (cardH + gapY);
 
-    // Card background
     slide.addShape('roundRect', {
       x, y, w: cardW, h: cardH,
-      fill: { color: 'F2F2F2' },
-      rectRadius: 0.05,
-      line: { color: 'D9D9D9', width: 0.5 },
+      fill: { color: CARD_BG },
+      rectRadius: 0.04,
+      line: { color: CARD_BORDER, width: 0.5 },
     });
 
-    // Label
     slide.addText(kpi.label, {
-      x, y: y + 0.08, w: cardW, h: 0.25,
-      fontSize: 8, fontFace: 'Calibri', color: '808080',
-      align: 'center',
+      x, y: y + 0.08, w: cardW, h: 0.22,
+      fontSize: 7.5, fontFace: 'Calibri', color: GRAY, align: 'center',
     });
 
-    // Value
     slide.addText(kpi.value, {
-      x, y: y + 0.35, w: cardW, h: 0.4,
-      fontSize: 15, fontFace: 'Calibri', bold: true, color: '1F3864',
-      align: 'center',
-      shrinkText: true,
+      x, y: y + 0.32, w: cardW, h: 0.4,
+      fontSize: 14, fontFace: 'Calibri', bold: true, color: DARK_BLUE,
+      align: 'center', shrinkText: true,
     });
   });
 
-  // ── RIGHT SIDE — Bar chart: Company vs Partner NPV ──
-  const chartX = 5.2;
+  // ── RIGHT — NPV comparison bar chart ───────────────────────
+  const chartX = 5.1;
   const chartY = 1.0;
-  const chartW = 4.4;
+  const chartW = 4.6;
   const chartH = 3.0;
 
-  // Section title
   slide.addText(`NPV Split (${ccy} '000)`, {
-    x: chartX, y: chartY - 0.3, w: chartW, h: 0.25,
-    fontSize: 9, fontFace: 'Calibri', bold: true, color: '1F3864',
+    x: chartX, y: chartY - 0.25, w: chartW, h: 0.22,
+    fontSize: 8, fontFace: 'Calibri', bold: true, color: DARK_BLUE,
   });
 
   const chartData = [
@@ -85,16 +86,13 @@ export function addPartnerViewSlide(pptx: PptxGenJS, ctx: ExportContext): void {
   ];
 
   slide.addChart('bar', chartData, {
-    x: chartX,
-    y: chartY,
-    w: chartW,
-    h: chartH,
+    x: chartX, y: chartY, w: chartW, h: chartH,
     barGrouping: 'clustered',
-    chartColors: ['2E75B6', 'ED7D31'],
+    chartColors: [BLUE, ORANGE],
     showLegend: false,
     showValue: true,
     dataLabelFontSize: 8,
-    dataLabelColor: '1F3864',
+    dataLabelColor: DARK_BLUE,
     catAxisLabelFontSize: 9,
     catAxisLabelFontFace: 'Calibri',
     valAxisLabelFontSize: 7,
@@ -104,13 +102,12 @@ export function addPartnerViewSlide(pptx: PptxGenJS, ctx: ExportContext): void {
     plotArea: { fill: { color: 'FFFFFF' } },
   });
 
-  // ── Bottom note ──
+  // ── Footer ─────────────────────────────────────────────────
   slide.addText(
-    'Partner view estimates partner economics based on supply price, milestones, royalties, and local market assumptions. ' +
-    'NPV shares represent relative proportion of combined Company + Partner NPV.',
+    'Partner economics based on supply price, milestones, royalties, and local market assumptions.',
     {
-      x: 0.5, y: 4.5, w: 9, h: 0.5,
-      fontSize: 7, fontFace: 'Calibri', italic: true, color: 'A0A0A0',
+      x: 0.3, y: 5.15, w: 9.4, h: 0.25,
+      fontSize: 7, fontFace: 'Calibri', italic: true, color: '999999',
     },
   );
 }

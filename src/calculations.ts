@@ -1009,8 +1009,9 @@ export function computePartnerViewOutputs(
     const partnerFCF = createPeriodArray(0, NP);
 
     for (let i = 0; i < NP; i++) {
-      // Partner revenue = biosimilar in-market sales (local currency)
-      partnerRevenue[i] = safeNumber(co.biosimilarInMarketSales[i]);
+      // Partner revenue = partner net sales (after GTN deductions, local currency)
+      // This is what the partner actually receives after discounts to buyers
+      partnerRevenue[i] = safeNumber(co.partnerNetSales[i]);
 
       // Partner COGS = supply price paid to us (grossSupplyRevenue)
       // For Mode 2 (fixed), grossSupplyRevenue is in EUR — convert to local currency

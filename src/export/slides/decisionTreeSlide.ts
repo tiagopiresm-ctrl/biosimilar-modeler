@@ -1,40 +1,35 @@
-// Decision Tree Summary slide – bar chart + KPI cards
+// Slide 8: Decision Tree — horizontal bar chart + KPI cards
 
 import type PptxGenJS from 'pptxgenjs';
 import type { ExportContext } from '../exportTypes';
 import { formatCurrency, formatPercent } from '../../calculations';
 
-export function addDecisionTreeSlide(pptx: PptxGenJS, ctx: ExportContext): void {
-  const slide = pptx.addSlide();
-  const { decisionTree, dtOutputs, npvOutputs, config } = ctx;
+const DARK_BLUE = '1F4E79';
+const BLUE = '2E75B6';
+const GREEN = '70AD47';
+const CARD_BG = 'F2F2F2';
+const CARD_BORDER = 'D9D9D9';
+const GRAY = '808080';
 
-  // ── Title bar ──────────────────────────────────────────────────────────
-  slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.7, fill: { color: '1F3864' } });
+export function addDecisionTreeSlide(pptx: PptxGenJS, ctx: ExportContext): void {
+  const { decisionTree, dtOutputs, npvOutputs, config } = ctx;
+  if (decisionTree.length === 0) return; // skip slide entirely if no gates
+
+  const slide = pptx.addSlide();
+  const ccy = config.currency;
+
+  // ── Title bar ──────────────────────────────────────────────
+  slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.6, fill: { color: DARK_BLUE } });
   slide.addText('Decision Tree Analysis', {
-    x: 0.5, y: 0.1, w: 9, h: 0.5,
+    x: 0.4, y: 0.08, w: 9, h: 0.44,
     fontSize: 18, fontFace: 'Calibri', bold: true, color: 'FFFFFF',
   });
 
-  if (decisionTree.length === 0) {
-    slide.addText('No decision gates defined', {
-      x: 1, y: 2, w: 8, h: 1,
-      fontSize: 14, fontFace: 'Calibri', color: '808080', align: 'center',
-    });
-    return;
-  }
-
-  // ── Top section: Horizontal bar chart (55 % of usable height) ─────────
-  const chartX = 0.5;
-  const chartY = 0.85;
-  const chartW = 9.0;
-  const chartH = 2.9; // ~55 % of the 5.3″ usable area below the title
-
+  // ── Horizontal bar chart: gate probabilities ───────────────
   const gateNames = decisionTree.map((g) => g.name);
   const gateProbabilities = decisionTree.map((g) => g.probability * 100);
   const cumulativePoS = dtOutputs.cumulativePoS * 100;
 
-  const BLUE = '2E75B6';
-  const GREEN = '70AD47';
   const gateColors = decisionTree.map(() => BLUE);
 
   const chartData = [
@@ -46,10 +41,7 @@ export function addDecisionTreeSlide(pptx: PptxGenJS, ctx: ExportContext): void 
   ];
 
   slide.addChart('bar', chartData, {
-    x: chartX,
-    y: chartY,
-    w: chartW,
-    h: chartH,
+    x: 0.4, y: 0.8, w: 9.2, h: 2.8,
     barDir: 'bar', // horizontal bars
     showValue: true,
     valAxisMaxVal: 100,
@@ -58,49 +50,47 @@ export function addDecisionTreeSlide(pptx: PptxGenJS, ctx: ExportContext): void 
     dataLabelFontSize: 8,
     dataLabelColor: '333333',
     chartColors: [...gateColors, GREEN],
-    catAxisLabelFontSize: 9,
-    valAxisLabelFontSize: 8,
+    catAxisLabelFontSize: 8,
+    valAxisLabelFontSize: 7,
     valAxisTitle: 'Probability (%)',
-    valAxisTitleFontSize: 8,
+    valAxisTitleFontSize: 7,
     showLegend: false,
   });
 
-  // ── Bottom section: 4 KPI cards (35 % of usable height) ───────────────
-  const kpiY = 4.05;
-  const cardW = 2.0;
-  const cardH = 0.9;
-  const gap = 0.3;
-  const totalW = 4 * cardW + 3 * gap;
-  const startX = (10 - totalW) / 2; // centre across the 10″ slide width
-
+  // ── Bottom KPI cards ───────────────────────────────────────
+  const kpiY = 3.9;
   const kpis = [
     { label: 'Cumulative PoS', value: formatPercent(dtOutputs.cumulativePoS) },
-    { label: 'NPV', value: formatCurrency(npvOutputs.npv, config.currency) },
-    { label: 'rNPV', value: formatCurrency(npvOutputs.rnpv, config.currency) },
-    { label: 'ENPV', value: formatCurrency(dtOutputs.enpv, config.currency) },
+    { label: 'NPV', value: formatCurrency(npvOutputs.npv, ccy) },
+    { label: 'rNPV', value: formatCurrency(npvOutputs.rnpv, ccy) },
+    { label: 'ENPV', value: formatCurrency(dtOutputs.enpv, ccy) },
   ];
+
+  const cardW = 2.1;
+  const cardH = 0.85;
+  const gap = 0.2;
+  const totalW = kpis.length * cardW + (kpis.length - 1) * gap;
+  const startX = (10 - totalW) / 2;
 
   kpis.forEach((kpi, i) => {
     const x = startX + i * (cardW + gap);
 
     slide.addShape('roundRect', {
-      x,
-      y: kpiY,
-      w: cardW,
-      h: cardH,
-      fill: { color: 'F2F2F2' },
-      rectRadius: 0.05,
-      line: { color: 'D9D9D9', width: 0.5 },
+      x, y: kpiY, w: cardW, h: cardH,
+      fill: { color: CARD_BG },
+      rectRadius: 0.04,
+      line: { color: CARD_BORDER, width: 0.5 },
     });
 
     slide.addText(kpi.label, {
-      x, y: kpiY + 0.1, w: cardW, h: 0.25,
-      fontSize: 8, fontFace: 'Calibri', color: '808080', align: 'center',
+      x, y: kpiY + 0.08, w: cardW, h: 0.22,
+      fontSize: 7.5, fontFace: 'Calibri', color: GRAY, align: 'center',
     });
 
     slide.addText(kpi.value, {
-      x, y: kpiY + 0.35, w: cardW, h: 0.4,
-      fontSize: 14, fontFace: 'Calibri', bold: true, color: '1F3864', align: 'center',
+      x, y: kpiY + 0.32, w: cardW, h: 0.4,
+      fontSize: 14, fontFace: 'Calibri', bold: true, color: DARK_BLUE,
+      align: 'center', shrinkText: true,
     });
   });
 }
