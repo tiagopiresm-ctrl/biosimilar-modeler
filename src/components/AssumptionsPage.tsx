@@ -1152,23 +1152,31 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
         />
       )}
 
-      {/* Economics fields (Royalty) — shown in both modes */}
-      {COUNTRY_SCENARIO_FIELDS_ECONOMICS.map((field) => (
-        <ScenarioGrid
-          key={field.key}
-          label={field.label}
-          row={maskBeforePeriod(country[field.key] as ScenarioRow, country.biosimilarLaunchPeriodIndex)}
-          activeScenario={config.activeScenario}
-          scenarioMode={config.scenarioMode}
-          format={field.format}
-          decimals={field.decimals}
-          headers={headers}
-          onCellChange={(sk, pi, v) =>
-            updateCountryAssumption(countryIndex, field.key, sk, pi, v)
-          }
-          disabledBefore={country.biosimilarLaunchPeriodIndex}
-        />
-      ))}
+      {/* Economics fields (Royalty) — editable only in Fixed mode */}
+      {country.useFixedRoyaltyRate ? (
+        COUNTRY_SCENARIO_FIELDS_ECONOMICS.map((field) => (
+          <ScenarioGrid
+            key={field.key}
+            label={field.label}
+            row={maskBeforePeriod(country[field.key] as ScenarioRow, country.biosimilarLaunchPeriodIndex)}
+            activeScenario={config.activeScenario}
+            scenarioMode={config.scenarioMode}
+            format={field.format}
+            decimals={field.decimals}
+            headers={headers}
+            onCellChange={(sk, pi, v) =>
+              updateCountryAssumption(countryIndex, field.key, sk, pi, v)
+            }
+            disabledBefore={country.biosimilarLaunchPeriodIndex}
+          />
+        ))
+      ) : (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <p className="text-xs font-medium text-amber-700">
+            Royalty Rate — <strong>Tiered Mode Active</strong>. Rates are determined by the tier table below based on cumulative partner net sales.
+          </p>
+        </div>
+      )}
 
       {/* Milestone Payments (non-scenario) */}
       <SingleRowGrid
