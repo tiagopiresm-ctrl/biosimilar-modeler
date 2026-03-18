@@ -436,33 +436,40 @@ export function computePLOutputs(
   }
 
   // ---- Tiered Royalty Override ----
-  // If useFixedRoyaltyRate is false, replace totalRoyaltyIncome with tiered marginal royalties
-  // based on global (FX-converted) partner net sales
+  // Cumulative ratchet: track lifetime partner net sales, find tier, apply flat rate to annual sales.
+  // Rate can only increase (ratchet up) — once a higher tier is reached, it stays there.
   if (!config.useFixedRoyaltyRate && config.royaltyTiers && config.royaltyTiers.length > 0) {
-    const tiers = config.royaltyTiers;
+    const tiers = [...config.royaltyTiers].sort((a, b) => a.threshold - b.threshold);
+    let cumulativePNS = 0;
+    let highestTierRate = 0; // ratchet: rate can only go up
+
     for (let i = 0; i < NP; i++) {
-      // Compute global partner net sales (FX-converted to model currency)
-      let globalPNS = 0;
+      // Compute this year's global partner net sales (FX-converted to model currency)
+      let annualPNS = 0;
       for (let c = 0; c < countryOutputs.length; c++) {
         const fxRate = countries[c]?.fxRate[i] ?? 1;
         const fx = fxRate !== 0 ? fxRate : 1;
-        globalPNS += safeDivide(countryOutputs[c].partnerNetSales[i], fx);
+        annualPNS += safeDivide(countryOutputs[c].partnerNetSales[i], fx);
       }
 
-      // Apply tiered marginal rates
-      let tieredRoyalty = 0;
-      let remaining = globalPNS;
-      let prevThreshold = 0;
+      // Accumulate lifetime partner net sales
+      cumulativePNS += annualPNS;
+
+      // Find which tier the cumulative total falls into → get that tier's flat rate
+      let tierRate = 0;
       for (const tier of tiers) {
-        if (remaining <= 0) break;
-        const bracketSize = tier.threshold - prevThreshold;
-        const applicable = Math.min(remaining, bracketSize);
-        tieredRoyalty += applicable * tier.rate;
-        remaining -= applicable;
-        prevThreshold = tier.threshold;
+        if (cumulativePNS >= tier.threshold) {
+          tierRate = tier.rate; // keep checking — last matching tier wins
+        } else {
+          break; // thresholds are sorted, so stop at the first one we haven't reached
+        }
       }
 
-      totalRoyaltyIncome[i] = safeNumber(tieredRoyalty);
+      // Ratchet: rate can only increase, never decrease
+      highestTierRate = Math.max(highestTierRate, tierRate);
+
+      // Apply the ratcheted flat rate to this year's annual sales
+      totalRoyaltyIncome[i] = safeNumber(annualPNS * highestTierRate);
 
       // Recalculate totalRevenue for this period
       totalRevenue[i] = safeNumber(
