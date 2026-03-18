@@ -1,12 +1,16 @@
 // ──────────────────────────────────────────────────────────────
 // Interactive P&L Assumptions Sheet — Scenario-driven OpEx + FCF inputs
+// Supports both 3-scenario and base-only modes
 // ──────────────────────────────────────────────────────────────
 
 import type { Workbook } from 'exceljs';
 import type { ExportContext } from '../../exportTypes';
 import type { CellMap } from '../cellMap';
+import type { ScenarioRow } from '../../../types';
 import {
-  setupSheet, writePeriodHeader, writeSection, writeScenarioBlock, writeInputRow,
+  setupSheet, writePeriodHeader, writeSection,
+  writeScenarioBlock, writeBaseOnlyBlock,
+  writeInputRow, writeColorLegend,
 } from '../formulaHelpers';
 import { NUM_FMT } from '../../excelStyles';
 
@@ -23,101 +27,74 @@ export function addInteractivePLAssumptionsSheet(
   const sheetKey = 'plAssumptions';
   const activeScenarioRef = "Config!B5";
   const activeScenarioIdx = config.activeScenario - 1; // 0-based
+  const isBaseOnly = config.scenarioMode === 'base_only';
 
-  // Setup: column widths + freeze panes
   setupSheet(ws, NP);
-
-  // ── Row 1: Period header ──
   writePeriodHeader(ws, periodLabels);
 
-  // Row 2: blank — start content at row 3
+  // Color legend on row 2
+  writeColorLegend(ws, 2);
 
-  let row = 3;
+  let row = 4;
+
+  // Helper: write scenario or base-only block depending on mode
+  const writeBlock = (
+    label: string, data: ScenarioRow, fieldName: string, numFmt: string,
+  ): { activeRow: number; nextRow: number } => {
+    if (isBaseOnly) {
+      return writeBaseOnlyBlock(
+        ws, row, label, data, NP, cellMap, sheetKey, fieldName, numFmt, activeScenarioIdx,
+      );
+    }
+    return writeScenarioBlock(
+      ws, row, label, data, NP, cellMap, sheetKey, fieldName, numFmt,
+      activeScenarioRef, activeScenarioIdx,
+    );
+  };
 
   // ── Commercial & Sales ──
   writeSection(ws, row, 'Commercial & Sales', colCount);
   row++;
-  const csResult = writeScenarioBlock(
-    ws, row, 'Commercial & Sales', plAssumptions.commercialSales,
-    NP, cellMap, sheetKey, 'commercialSales', NUM_FMT.integer,
-    activeScenarioRef, activeScenarioIdx,
-  );
-  row = csResult.nextRow;
+  row = writeBlock('Commercial & Sales', plAssumptions.commercialSales, 'commercialSales', NUM_FMT.integer).nextRow;
 
   // ── G&A ──
   writeSection(ws, row, 'General & Administrative', colCount);
   row++;
-  const gaResult = writeScenarioBlock(
-    ws, row, 'G&A', plAssumptions.gAndA,
-    NP, cellMap, sheetKey, 'gAndA', NUM_FMT.integer,
-    activeScenarioRef, activeScenarioIdx,
-  );
-  row = gaResult.nextRow;
+  row = writeBlock('G&A', plAssumptions.gAndA, 'gAndA', NUM_FMT.integer).nextRow;
 
   // ── R&D ──
   writeSection(ws, row, 'Research & Development', colCount);
   row++;
-  const rdResult = writeScenarioBlock(
-    ws, row, 'R&D', plAssumptions.rAndD,
-    NP, cellMap, sheetKey, 'rAndD', NUM_FMT.integer,
-    activeScenarioRef, activeScenarioIdx,
-  );
-  row = rdResult.nextRow;
+  row = writeBlock('R&D', plAssumptions.rAndD, 'rAndD', NUM_FMT.integer).nextRow;
 
   // ── D&A ──
   writeSection(ws, row, 'Depreciation & Amortization', colCount);
   row++;
-  const daResult = writeScenarioBlock(
-    ws, row, 'D&A', plAssumptions.dAndA,
-    NP, cellMap, sheetKey, 'dAndA', NUM_FMT.integer,
-    activeScenarioRef, activeScenarioIdx,
-  );
-  row = daResult.nextRow;
+  row = writeBlock('D&A', plAssumptions.dAndA, 'dAndA', NUM_FMT.integer).nextRow;
 
   // ── Tax Rate ──
   writeSection(ws, row, 'Tax Rate', colCount);
   row++;
-  const trResult = writeScenarioBlock(
-    ws, row, 'Tax Rate', plAssumptions.taxRate,
-    NP, cellMap, sheetKey, 'taxRate', NUM_FMT.percent,
-    activeScenarioRef, activeScenarioIdx,
-  );
-  row = trResult.nextRow;
+  row = writeBlock('Tax Rate', plAssumptions.taxRate, 'taxRate', NUM_FMT.percent).nextRow;
 
   // ── Financial Costs ──
   writeSection(ws, row, 'Financial Costs', colCount);
   row++;
-  const fcResult = writeScenarioBlock(
-    ws, row, 'Financial Costs', plAssumptions.financialCosts,
-    NP, cellMap, sheetKey, 'financialCosts', NUM_FMT.integer,
-    activeScenarioRef, activeScenarioIdx,
-  );
-  row = fcResult.nextRow;
+  row = writeBlock('Financial Costs', plAssumptions.financialCosts, 'financialCosts', NUM_FMT.integer).nextRow;
 
   // ── Other Income ──
   writeSection(ws, row, 'Other Income', colCount);
   row++;
-  const oiResult = writeScenarioBlock(
-    ws, row, 'Other Income', plAssumptions.otherIncome,
-    NP, cellMap, sheetKey, 'otherIncome', NUM_FMT.integer,
-    activeScenarioRef, activeScenarioIdx,
-  );
-  row = oiResult.nextRow;
+  row = writeBlock('Other Income', plAssumptions.otherIncome, 'otherIncome', NUM_FMT.integer).nextRow;
 
   // ── FCF Bridge ──
   writeSection(ws, row, 'FCF Bridge Inputs', colCount);
   row++;
 
-  // Working Capital Change (single input row)
-  writeInputRow(
-    ws, row, 'Working Capital Change', fcfBridge.workingCapitalChange,
-    NP, cellMap, sheetKey, 'workingCapital', NUM_FMT.integer,
-  );
+  writeInputRow(ws, row, 'Working Capital Change', fcfBridge.workingCapitalChange,
+    NP, cellMap, sheetKey, 'workingCapital', NUM_FMT.integer);
   row++;
 
-  // Capital Expenditure (single input row)
-  writeInputRow(
-    ws, row, 'Capital Expenditure', fcfBridge.capitalExpenditure,
-    NP, cellMap, sheetKey, 'capitalExpenditure', NUM_FMT.integer,
-  );
+  writeInputRow(ws, row, 'Capital Expenditure', fcfBridge.capitalExpenditure,
+    NP, cellMap, sheetKey, 'capitalExpenditure', NUM_FMT.integer);
 }

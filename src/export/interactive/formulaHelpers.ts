@@ -135,6 +135,71 @@ export function writeScenarioBlock(
 }
 
 /**
+ * Write a single input row for base-only mode.
+ * Registers as both the raw key and _active key so formulas that
+ * reference `fieldName_active` still work.
+ */
+export function writeBaseOnlyBlock(
+  ws: Worksheet,
+  startRow: number,
+  label: string,
+  data: ScenarioRow,
+  NP: number,
+  cellMap: CellMap,
+  sheetKey: string,
+  fieldName: string,
+  numFmt: string,
+  activeScenarioIdx: number,
+): { activeRow: number; nextRow: number } {
+  const arrays = [data.bear, data.base, data.bull];
+  const activeData = arrays[activeScenarioIdx];
+
+  const c1 = ws.getCell(startRow, 1);
+  c1.value = `  ${label}`;
+  c1.font = LABEL_FONT;
+
+  for (let p = 0; p < NP; p++) {
+    const col = periodCol(p);
+    const cell = ws.getCell(startRow, col);
+    cell.value = activeData[p] ?? 0;
+    cell.numFmt = numFmt;
+    cell.fill = INPUT_FILL;
+    // Register as both _active and raw so all formula refs work
+    cellMap.register(sheetKey, `${fieldName}_active`, p, ws.name, cellAddr(startRow, col));
+    cellMap.register(sheetKey, `${fieldName}_${activeScenarioIdx}`, p, ws.name, cellAddr(startRow, col));
+  }
+
+  return { activeRow: startRow, nextRow: startRow + 2 };
+}
+
+/**
+ * Write a color legend row at the top of a sheet.
+ */
+export function writeColorLegend(ws: Worksheet, row: number): void {
+  // Cell A
+  ws.getCell(row, 1).value = 'Legend:';
+  ws.getCell(row, 1).font = { ...BOLD_VALUE_FONT, size: 8 };
+
+  // Yellow = Input
+  const b = ws.getCell(row, 2);
+  b.value = 'Editable Input';
+  b.fill = INPUT_FILL;
+  b.font = { name: 'Calibri', size: 8 };
+
+  // Green = Active Scenario
+  const c = ws.getCell(row, 3);
+  c.value = 'Auto (Scenario)';
+  c.fill = ACTIVE_ROW_FILL;
+  c.font = { name: 'Calibri', size: 8 };
+
+  // Blue = Formula
+  const d = ws.getCell(row, 4);
+  d.value = 'Formula (locked)';
+  d.fill = OUTPUT_FILL;
+  d.font = { name: 'Calibri', size: 8 };
+}
+
+/**
  * Write a single data row with static values (input row).
  */
 export function writeInputRow(

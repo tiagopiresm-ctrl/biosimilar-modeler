@@ -15,8 +15,8 @@ import {
   INPUT_FILL,
   cellAddr,
 
-  writeScenarioBlock, writeInputRow, writeSection,
-  setupSheet, writePeriodHeader,
+  writeScenarioBlock, writeBaseOnlyBlock, writeInputRow, writeSection,
+  setupSheet, writePeriodHeader, writeColorLegend,
 } from '../formulaHelpers';
 import { LABEL_FONT, BOLD_VALUE_FONT } from '../../excelStyles';
 
@@ -81,13 +81,20 @@ function buildCountrySheet(
   const NP = ctx.periodLabels.length;
   const colCount = NP + 1;
   const activeIdx = ctx.config.activeScenario - 1; // 0-based
+  const isBaseOnly = ctx.config.scenarioMode === 'base_only';
+
+  // Conditional scenario writer — uses single row in base-only mode
+  const sb: typeof writeScenarioBlock = (...args) =>
+    isBaseOnly
+      ? writeBaseOnlyBlock(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[10])
+      : writeScenarioBlock(...args);
 
   setupSheet(ws, NP);
 
-  // ── Row 1: Period header ──
   writePeriodHeader(ws, ctx.periodLabels);
+  writeColorLegend(ws, 2);
 
-  let row = 3;
+  let row = 4;
 
   // ════════════════════════════════════════════════════════════
   // Section: Country Settings
@@ -136,7 +143,7 @@ function buildCountrySheet(
   row++;
 
   // Volume Adjustment % (scenario block)
-  const volAdj = writeScenarioBlock(
+  const volAdj = sb(
     ws, row, 'Volume Adjustment %', country.volumeAdjustment,
     NP, cellMap, sheetKey, 'volumeAdjustment',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
@@ -148,7 +155,7 @@ function buildCountrySheet(
     writeInputRow(ws, row, 'ATC Class Volume', country.atcClassVolume, NP, cellMap, sheetKey, 'atcClassVolume', NUM_FMT.integer);
     row++;
 
-    const atcGrowth = writeScenarioBlock(
+    const atcGrowth = sb(
       ws, row, 'ATC Class Growth %', country.atcClassGrowth,
       NP, cellMap, sheetKey, 'atcClassGrowth',
       NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
@@ -171,7 +178,7 @@ function buildCountrySheet(
   writeInputRow(ws, row, 'Originator Price', country.originatorPrice, NP, cellMap, sheetKey, 'originatorPrice', NUM_FMT.decimal2);
   row++;
 
-  const origGrowth = writeScenarioBlock(
+  const origGrowth = sb(
     ws, row, 'Originator Price Growth %', country.originatorPriceGrowth,
     NP, cellMap, sheetKey, 'originatorPriceGrowth',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
@@ -184,14 +191,14 @@ function buildCountrySheet(
   writeSection(ws, row, 'Biosimilar Assumptions', colCount);
   row++;
 
-  const biosimShare = writeScenarioBlock(
+  const biosimShare = sb(
     ws, row, 'Biosimilar Market Share', country.biosimilarMarketShare,
     NP, cellMap, sheetKey, 'biosimilarMarketShare',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = biosimShare.nextRow;
 
-  const biosimPrice = writeScenarioBlock(
+  const biosimPrice = sb(
     ws, row, 'Biosimilar Price % of Originator', country.biosimilarPricePct,
     NP, cellMap, sheetKey, 'biosimilarPricePct',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
@@ -204,28 +211,28 @@ function buildCountrySheet(
   writeSection(ws, row, 'Partner Economics', colCount);
   row++;
 
-  const partnerGtn = writeScenarioBlock(
+  const partnerGtn = sb(
     ws, row, 'Partner GTN %', country.partnerGtnPct,
     NP, cellMap, sheetKey, 'partnerGtnPct',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = partnerGtn.nextRow;
 
-  const supplyPrice = writeScenarioBlock(
+  const supplyPrice = sb(
     ws, row, 'Supply Price %', country.supplyPricePct,
     NP, cellMap, sheetKey, 'supplyPricePct',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = supplyPrice.nextRow;
 
-  const fixedSupply = writeScenarioBlock(
+  const fixedSupply = sb(
     ws, row, 'Fixed Supply Price/Gram', country.fixedSupplyPricePerGram,
     NP, cellMap, sheetKey, 'fixedSupplyPricePerGram',
     NUM_FMT.decimal2, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = fixedSupply.nextRow;
 
-  const royalty = writeScenarioBlock(
+  const royalty = sb(
     ws, row, 'Royalty Rate %', country.royaltyRatePct,
     NP, cellMap, sheetKey, 'royaltyRatePct',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
@@ -259,7 +266,7 @@ function buildCountrySheet(
       row++;
 
       // Generic Market Share (scenario block)
-      const genShare = writeScenarioBlock(
+      const genShare = sb(
         ws, row, `Generic ${i + 1} Market Share`, generic.marketShare,
         NP, cellMap, sheetKey, `generic_${i}_marketShare`,
         NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
@@ -267,7 +274,7 @@ function buildCountrySheet(
       row = genShare.nextRow;
 
       // Generic Price % (scenario block)
-      const genPrice = writeScenarioBlock(
+      const genPrice = sb(
         ws, row, `Generic ${i + 1} Price %`, generic.pricePct,
         NP, cellMap, sheetKey, `generic_${i}_pricePct`,
         NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
