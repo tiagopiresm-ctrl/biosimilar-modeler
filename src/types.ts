@@ -132,6 +132,9 @@ export interface ModelConfig {
   forecastEndYear: number;          // e.g. 2040 — last year of the model (replaces hardcoded loeYear+10)
   // Volume forecast method (global — applies to all countries)
   volumeForecastMethod: VolumeForecastMethod;
+  // Terminal Value (Gordon Growth Model)
+  terminalValueEnabled: boolean;    // toggle TV on/off (default: false)
+  terminalValueGrowthRate: number;  // perpetuity growth rate g (decimal, e.g. -0.02 = -2%)
   // Version for localStorage migration
   modelVersion: number;
 }
@@ -325,6 +328,11 @@ export interface NPVOutputs {
   riskAdjustedFCF: PeriodArray;
   riskAdjustedDiscountedFCF: PeriodArray;
   cumulativeRiskAdjDiscountedFCF: PeriodArray;
+  // Terminal Value
+  terminalValue: number;            // undiscounted TV
+  discountedTerminalValue: number;  // TV × last discount factor
+  npvWithTV: number;                // npv + discountedTerminalValue
+  rnpvWithTV: number;               // rnpv + risk-adjusted discounted TV
   // KPIs
   npv: number;
   rnpv: number;

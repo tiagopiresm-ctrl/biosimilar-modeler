@@ -805,23 +805,13 @@ export function computeNPVOutputs(
   // ---- Discount Rate (flat across periods) ----
   const discountRate = createPeriodArray(activeWACC, NP);
 
-  // ---- Discount Factor ----
-  // LOE (loeIdx) = 1.0
-  // Forward from LOE: DF[i] = DF[i-1] / (1 + WACC)
-  // Backward from LOE: DF[i] = DF[i+1] * (1 + WACC)
+  // ---- Discount Factor (mid-period convention) ----
+  // Mid-period discounting: DF[i] = 1 / (1+WACC)^(i - loeIdx + 0.5)
+  // The +0.5 shift means cash at LOE year is discounted by half a year (mid-period convention).
   const discountFactor = createPeriodArray(0, NP);
-  discountFactor[loeIdx] = 1.0;
-
-  for (let i = loeIdx + 1; i < NP; i++) {
-    discountFactor[i] = safeNumber(
-      discountFactor[i - 1] / (1 + activeWACC),
-    );
-  }
-
-  for (let i = loeIdx - 1; i >= 0; i--) {
-    discountFactor[i] = safeNumber(
-      discountFactor[i + 1] * (1 + activeWACC),
-    );
+  for (let i = 0; i < NP; i++) {
+    const yearsFromLOE = i - loeIdx;
+    discountFactor[i] = safeNumber(1 / Math.pow(1 + activeWACC, yearsFromLOE + 0.5));
   }
 
   // ---- Discounted FCF ----
@@ -866,9 +856,25 @@ export function computeNPVOutputs(
           );
   }
 
+  // ---- Terminal Value (Gordon Growth Model) ----
+  let terminalValue = 0;
+  let discountedTerminalValue = 0;
+  if (config.terminalValueEnabled) {
+    const lastFCF = fcf[NP - 1];
+    const g = config.terminalValueGrowthRate;
+    if (activeWACC > g) {
+      terminalValue = (lastFCF * (1 + g)) / (activeWACC - g);
+      discountedTerminalValue = terminalValue * discountFactor[NP - 1];
+    }
+  }
+
   // ---- KPIs ----
   const npv = discountedFCF.reduce((sum, v) => sum + v, 0);
   const rnpv = riskAdjustedDiscountedFCF.reduce((sum, v) => sum + v, 0);
+  const npvWithTV = npv + discountedTerminalValue;
+  // For risk-adjusted: use last period's PoS
+  const riskAdjTV = discountedTerminalValue * (cumulativePoS[NP - 1] ?? 1);
+  const rnpvWithTV = rnpv + riskAdjTV;
   const irr = computeIRR(fcf);
   const rirr = computeIRR(riskAdjustedFCF);
   const moneyAtRisk = Math.min(...cumulativeFCF);
@@ -926,6 +932,10 @@ export function computeNPVOutputs(
     riskAdjustedFCF,
     riskAdjustedDiscountedFCF,
     cumulativeRiskAdjDiscountedFCF,
+    terminalValue,
+    discountedTerminalValue,
+    npvWithTV,
+    rnpvWithTV,
     npv,
     rnpv,
     irr,

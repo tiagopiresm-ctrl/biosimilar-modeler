@@ -11,7 +11,7 @@ import type { CellMap } from '../cellMap';
 import { getEarliestLoeIndex } from '../../../types';
 import { NUM_FMT, LABEL_FONT, BOLD_VALUE_FONT } from '../../excelStyles';
 import {
-  cellAddr, periodCol,
+  cellAddr,
   formulaValue,
   writeFormulaRow, writeSection,
   setupSheet, writePeriodHeader,
@@ -100,16 +100,10 @@ export function addInteractiveNPVSheet(
   }, npvOutputs.discountRate, cellMap, sheetKey, 'discountRate', NUM_FMT.percent);
   row++;
 
-  // Discount Factor — anchored at LOE
+  // Discount Factor — mid-period convention: DF = 1/(1+WACC)^(i - loeIdx + 0.5)
   writeFormulaRow(ws, row, 'Discount Factor', NP, (p) => {
-    if (p === loeIdx) return '1';
-    if (p > loeIdx) {
-      const prevDF = cellAddr(row, periodCol(p - 1));
-      return `${prevDF}/(1+${waccRef})`;
-    }
-    // p < loeIdx
-    const nextDF = cellAddr(row, periodCol(p + 1));
-    return `${nextDF}*(1+${waccRef})`;
+    const yearsFromLOE = p - loeIdx;
+    return `1/(1+${waccRef})^(${yearsFromLOE}+0.5)`;
   }, npvOutputs.discountFactor, cellMap, sheetKey, 'discountFactor', NUM_FMT.decimal2);
   row++;
 
@@ -276,4 +270,59 @@ export function addInteractiveNPVSheet(
   pbdCell.font = BOLD_VALUE_FONT;
   cellMap.registerScalar(sheetKey, 'paybackDiscounted', ws.name, cellAddr(row, 2));
   row++;
+
+  // ════════════════════════════════════════════════════════════
+  // Section: Terminal Value (Gordon Growth Model)
+  // ════════════════════════════════════════════════════════════
+  if (ctx.config.terminalValueEnabled) {
+    row++;
+    writeSection(ws, row, 'Terminal Value (Gordon Growth Model)', colCount);
+    row++;
+
+    // Terminal Value (undiscounted)
+    const tvLabel = ws.getCell(row, 1);
+    tvLabel.value = 'Terminal Value (undiscounted)';
+    tvLabel.font = BOLD_VALUE_FONT;
+    const tvCell = ws.getCell(row, 2);
+    tvCell.value = formulaValue('', npvOutputs.terminalValue);
+    tvCell.numFmt = NUM_FMT.integer;
+    tvCell.font = BOLD_VALUE_FONT;
+    cellMap.registerScalar(sheetKey, 'terminalValue', ws.name, cellAddr(row, 2));
+    row++;
+
+    // Discounted Terminal Value
+    const dtvLabel = ws.getCell(row, 1);
+    dtvLabel.value = 'Discounted Terminal Value';
+    dtvLabel.font = BOLD_VALUE_FONT;
+    const dtvCell = ws.getCell(row, 2);
+    dtvCell.value = formulaValue('', npvOutputs.discountedTerminalValue);
+    dtvCell.numFmt = NUM_FMT.integer;
+    dtvCell.font = BOLD_VALUE_FONT;
+    cellMap.registerScalar(sheetKey, 'discountedTerminalValue', ws.name, cellAddr(row, 2));
+    row++;
+
+    // NPV incl. TV
+    const npvTvLabel = ws.getCell(row, 1);
+    npvTvLabel.value = 'NPV incl. TV';
+    npvTvLabel.font = BOLD_VALUE_FONT;
+    const npvTvCell = ws.getCell(row, 2);
+    const npvRef = cellMap.getScalar(sheetKey, 'npvValue').toLocal();
+    const dtvRef = cellMap.getScalar(sheetKey, 'discountedTerminalValue').toLocal();
+    npvTvCell.value = formulaValue(`${npvRef}+${dtvRef}`, npvOutputs.npvWithTV);
+    npvTvCell.numFmt = NUM_FMT.integer;
+    npvTvCell.font = BOLD_VALUE_FONT;
+    cellMap.registerScalar(sheetKey, 'npvWithTV', ws.name, cellAddr(row, 2));
+    row++;
+
+    // rNPV incl. TV
+    const rnpvTvLabel = ws.getCell(row, 1);
+    rnpvTvLabel.value = 'rNPV incl. TV';
+    rnpvTvLabel.font = BOLD_VALUE_FONT;
+    const rnpvTvCell = ws.getCell(row, 2);
+    rnpvTvCell.value = formulaValue('', npvOutputs.rnpvWithTV);
+    rnpvTvCell.numFmt = NUM_FMT.integer;
+    rnpvTvCell.font = BOLD_VALUE_FONT;
+    cellMap.registerScalar(sheetKey, 'rnpvWithTV', ws.name, cellAddr(row, 2));
+    row++;
+  }
 }

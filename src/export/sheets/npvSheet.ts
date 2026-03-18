@@ -83,6 +83,12 @@ export function addNPVSheet(wb: Workbook, ctx: ExportContext): void {
   const kpis: [string, string][] = [
     ['NPV', formatCurrency(npvOutputs.npv, config.currency)],
     ['rNPV', formatCurrency(npvOutputs.rnpv, config.currency)],
+    ...(config.terminalValueEnabled ? [
+      ['Terminal Value (undiscounted)', formatCurrency(npvOutputs.terminalValue, config.currency)] as [string, string],
+      ['Discounted Terminal Value', formatCurrency(npvOutputs.discountedTerminalValue, config.currency)] as [string, string],
+      ['NPV incl. TV', formatCurrency(npvOutputs.npvWithTV, config.currency)] as [string, string],
+      ['rNPV incl. TV', formatCurrency(npvOutputs.rnpvWithTV, config.currency)] as [string, string],
+    ] : []),
     ['IRR', npvOutputs.irr != null ? formatPercent(npvOutputs.irr) : 'N/A'],
     ['rIRR', npvOutputs.rirr != null ? formatPercent(npvOutputs.rirr) : 'N/A'],
     ['Money at Risk', formatCurrency(npvOutputs.moneyAtRisk, config.currency)],

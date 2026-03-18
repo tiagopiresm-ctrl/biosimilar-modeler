@@ -19,7 +19,7 @@ import { resizeModelState } from './periodResize';
 import { COUNTRY_CURRENCY_MAP } from './ecbFxData';
 
 /** Single source of truth for the current model version. */
-export const CURRENT_MODEL_VERSION = 19;
+export const CURRENT_MODEL_VERSION = 20;
 
 // ---- Validation ----
 
@@ -357,6 +357,16 @@ export function migrateState(persisted: unknown, fromVersion: number): ModelStat
     delete cfg19.useFixedRoyaltyRate;
     cfg19.modelVersion = 19;
     state.config = { ...cfg19 };
+  }
+
+  // Migrate from v19 to v20: add terminalValueEnabled and terminalValueGrowthRate
+  if (fromVersion < 20) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg20 = state.config as any;
+    cfg20.terminalValueEnabled = cfg20.terminalValueEnabled ?? false;
+    cfg20.terminalValueGrowthRate = cfg20.terminalValueGrowthRate ?? -0.02;
+    cfg20.modelVersion = 20;
+    state.config = { ...cfg20 };
   }
 
   return state as ModelState;

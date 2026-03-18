@@ -205,7 +205,9 @@ export function createDefaultConfig(): ModelConfig {
     forecastStartYear: new Date().getFullYear(),      // e.g. 2026
     forecastEndYear: 2040,                            // explicit end year
     volumeForecastMethod: 'growth',
-    modelVersion: 19,  // Must match CURRENT_MODEL_VERSION in migrate.ts
+    terminalValueEnabled: false,
+    terminalValueGrowthRate: -0.02,  // -2% decline (conservative for biosimilars)
+    modelVersion: 20,  // Must match CURRENT_MODEL_VERSION in migrate.ts
   };
 }
 

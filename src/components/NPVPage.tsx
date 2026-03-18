@@ -28,6 +28,7 @@ export function NPVPage() {
     fcfBridge,
     npvRisk,
     updateNPVRisk,
+    updateConfig,
     setScenario,
   } = useStore();
 
@@ -286,6 +287,22 @@ export function NPVPage() {
       isPositive: npvOutputs.rnpv > 0,
       isNA: false,
     },
+    ...(config.terminalValueEnabled ? [
+      {
+        label: `NPV incl. TV (${config.currency}'000)`,
+        value: formatKPICurrency(npvOutputs.npvWithTV),
+        isNegative: npvOutputs.npvWithTV < 0,
+        isPositive: npvOutputs.npvWithTV > 0,
+        isNA: false,
+      },
+      {
+        label: `rNPV incl. TV (${config.currency}'000)`,
+        value: formatKPICurrency(npvOutputs.rnpvWithTV),
+        isNegative: npvOutputs.rnpvWithTV < 0,
+        isPositive: npvOutputs.rnpvWithTV > 0,
+        isNA: false,
+      },
+    ] : []),
     {
       label: 'IRR (%)',
       value: npvOutputs.irr !== null ? formatPercent(npvOutputs.irr, 1) : 'N/A',
@@ -358,6 +375,46 @@ export function NPVPage() {
         <ScenarioSelector activeScenario={config.activeScenario} onSelect={setScenario} scenarioMode={config.scenarioMode} />
       </div>
 
+      {/* Terminal Value Settings */}
+      <SectionTitle>Terminal Value (Gordon Growth Model)</SectionTitle>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-8 flex items-center gap-6 flex-wrap">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={config.terminalValueEnabled}
+            onChange={e => updateConfig('terminalValueEnabled', e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-sm font-medium text-gray-700">Enable Terminal Value</span>
+        </label>
+        {config.terminalValueEnabled && (
+          <label className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Perpetuity Growth Rate (g):</span>
+            <input
+              type="number"
+              step="0.5"
+              value={parseFloat((config.terminalValueGrowthRate * 100).toFixed(4))}
+              onChange={e => updateConfig('terminalValueGrowthRate', parseFloat(e.target.value) / 100)}
+              className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 text-right"
+            />
+            <span className="text-sm text-gray-500">%</span>
+          </label>
+        )}
+        {config.terminalValueEnabled && (
+          <div className="text-xs text-gray-500 w-full mt-1">
+            TV = FCF<sub>last</sub> x (1+g) / (WACC - g), discounted to present.
+            {npvOutputs.terminalValue !== 0 && (
+              <span className="ml-2 font-medium">
+                Undiscounted TV: {formatNumber(npvOutputs.terminalValue, 0)} |
+                Discounted TV: {formatNumber(npvOutputs.discountedTerminalValue, 0)} |
+                NPV incl. TV: {formatNumber(npvOutputs.npvWithTV, 0)} |
+                rNPV incl. TV: {formatNumber(npvOutputs.rnpvWithTV, 0)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* KPI Summary Cards */}
       <SectionTitle>Key Performance Indicators</SectionTitle>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -397,7 +454,8 @@ export function NPVPage() {
 
       {/* Footer note */}
       <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-800 mt-4">
-        <strong>Notes:</strong> Discount Factor is anchored at LOE = 1.0.
+        <strong>Notes:</strong> Mid-period discounting convention is applied (cash flows assumed at mid-year).
+        Discount Factor at LOE = 1/(1+WACC)^0.5.
         Working Capital Change and Capital Expenditure are edited on the Assumptions page.
         Cumulative PoS values are applied per period to derive risk-adjusted cash flows.
       </div>
