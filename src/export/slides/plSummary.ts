@@ -53,59 +53,32 @@ export function addPLSummarySlide(pptx: PptxGenJS, ctx: ExportContext): void {
     },
   ];
 
-  // ── Combo chart (top half) ──────────────────────────────────
-  const chartTypes = [
-    {
-      type: 'bar' as const,
-      data: barData,
-      options: { barGrouping: 'clustered' },
-    },
-    {
-      type: 'line' as const,
-      data: lineData,
-      options: { secondaryValAxis: true },
-    },
+  // ── Clustered bar chart (top half) ──────────────────────────
+  const allData = [
+    ...barData,   // Revenue, COGS
+    ...lineData,  // EBITDA, Net Income
   ];
 
-  // Combo chart: pptxgenjs takes (IChartMulti[], options) for multi-type charts
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (slide as any).addChart(chartTypes, {
+  slide.addChart('bar', allData, {
     x: 0.4,
     y: 0.85,
     w: 9.2,
     h: 3.1,
+    barGrouping: 'clustered',
 
     showLegend: true,
     legendPos: 'b',
     legendFontSize: 8,
-    legendFontFace: 'Calibri',
 
     chartColors: ['2E75B6', 'C00000', 'ED7D31', '70AD47'],
 
     catAxisLabelFontSize: 7,
-    catAxisLabelFontFace: 'Calibri',
-    catAxisLabelColor: '333333',
     catAxisOrientation: 'minMax',
 
     valAxisLabelFontSize: 7,
-    valAxisLabelFontFace: 'Calibri',
-    valAxisLabelColor: '333333',
-    valAxisNumFmt: '#,##0',
-    valAxisTitle: `${config.currency} '000`,
-    valAxisTitleFontSize: 7,
-    valAxisTitleColor: '666666',
-
-    secondaryValAxis: true,
-    secondaryValAxisNumFmt: '#,##0',
-    secondaryValAxisLabelFontSize: 7,
-    secondaryValAxisLabelColor: '666666',
 
     showValue: false,
-
-    lineDataSymbol: 'circle',
-    lineDataSymbolSize: 5,
-    lineSize: 2,
-  } as any);
+  });
 
   // ── KPI boxes (bottom half) ─────────────────────────────────
   const kpis: { label: string; value: string; color: string }[] = [
