@@ -150,7 +150,14 @@ interface StoreActions {
   // Config
   updateConfig: (
     field: keyof ModelConfig,
-    value: string | number,
+    value: string | number | boolean,
+  ) => void;
+
+  // Royalty Tiers
+  updateRoyaltyTier: (
+    tierIndex: number,
+    field: 'threshold' | 'rate',
+    value: number,
   ) => void;
 
   // Import / Export
@@ -469,8 +476,17 @@ export const useStore = create<ModelState & StoreActions>()(
           return { countries };
         }),
 
+      // ---- Royalty Tiers ----
+      updateRoyaltyTier: (tierIndex: number, field: 'threshold' | 'rate', value: number) =>
+        set((state) => {
+          const royaltyTiers = state.config.royaltyTiers.map((tier, i) =>
+            i === tierIndex ? { ...tier, [field]: value } : tier,
+          );
+          return { config: { ...state.config, royaltyTiers } };
+        }),
+
       // ---- Config ----
-      updateConfig: (field: keyof ModelConfig, value: string | number) =>
+      updateConfig: (field: keyof ModelConfig, value: string | number | boolean) =>
         set((state) => {
           const config = { ...state.config, [field]: value };
           // When modelStartYear or forecastEndYear changes, resize all PeriodArrays

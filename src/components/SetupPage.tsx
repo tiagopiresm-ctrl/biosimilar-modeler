@@ -13,13 +13,14 @@ import {
   type VolumeForecastMethod,
   type ScenarioMode,
 } from '../types';
-import { Download, Upload, Plus, Trash2, Beaker } from 'lucide-react';
+import { Download, Upload, Plus, Trash2, Beaker, Layers } from 'lucide-react';
 
 export function SetupPage() {
   const {
     config,
     countries,
     updateConfig,
+    updateRoyaltyTier,
     addCountryByName,
     removeCountry,
     exportJSON,
@@ -381,6 +382,101 @@ export function SetupPage() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ──── Royalty Structure ──── */}
+      <SectionTitle>Royalty Structure</SectionTitle>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+            <Layers size={16} className="text-amber-600" />
+          </div>
+          <p className="text-xs text-gray-500">
+            Choose how royalties are calculated: a fixed rate per country (set on each country page) or
+            a tiered structure based on cumulative partner net sales across all countries.
+          </p>
+        </div>
+
+        {/* Toggle: Fixed vs Tiered */}
+        <div className="flex items-center gap-4 mb-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="royaltyMode"
+              checked={config.useFixedRoyaltyRate}
+              onChange={() => updateConfig('useFixedRoyaltyRate', true)}
+              className="accent-blue-600"
+            />
+            <span className="text-sm text-gray-700">Fixed Rate (per country)</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="royaltyMode"
+              checked={!config.useFixedRoyaltyRate}
+              onChange={() => updateConfig('useFixedRoyaltyRate', false)}
+              className="accent-blue-600"
+            />
+            <span className="text-sm text-gray-700">Tiered (cumulative ratchet)</span>
+          </label>
+        </div>
+
+        {config.useFixedRoyaltyRate ? (
+          <p className="text-xs text-gray-400">
+            Using per-country fixed royalty rates. Edit each country's <em>Royalty Rate %</em> on its
+            detail page.
+          </p>
+        ) : (
+          <div>
+            <p className="text-xs text-gray-500 mb-3">
+              Royalty rate ratchets up as cumulative global partner net sales cross each threshold
+              ({config.currency}'000).
+            </p>
+            <table className="w-full max-w-lg text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-4">Tier</th>
+                  <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-4">
+                    Cumulative Sales Threshold ({config.currency}'000)
+                  </th>
+                  <th className="text-left text-xs font-medium text-gray-500 pb-2">Rate (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {config.royaltyTiers.map((tier, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-2 pr-4 text-xs text-gray-500">{i + 1}</td>
+                    <td className="py-2 pr-4">
+                      <input
+                        type="number"
+                        value={tier.threshold}
+                        onChange={(e) =>
+                          updateRoyaltyTier(i, 'threshold', parseFloat(e.target.value) || 0)
+                        }
+                        min={0}
+                        className={inputClass + ' max-w-[180px]'}
+                      />
+                    </td>
+                    <td className="py-2">
+                      <input
+                        type="number"
+                        value={(tier.rate * 100).toFixed(1)}
+                        onChange={(e) =>
+                          updateRoyaltyTier(i, 'rate', (parseFloat(e.target.value) || 0) / 100)
+                        }
+                        min={0}
+                        max={100}
+                        step={0.5}
+                        className={inputClass + ' max-w-[100px]'}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* ──── Countries ──── */}
