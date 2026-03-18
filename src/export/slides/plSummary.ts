@@ -67,8 +67,9 @@ export function addPLSummarySlide(pptx: PptxGenJS, ctx: ExportContext): void {
     },
   ];
 
+  // Combo chart: pptxgenjs takes (IChartMulti[], options) for multi-type charts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  slide.addChart(chartTypes as any, [] as any, {
+  (slide as any).addChart(chartTypes, {
     x: 0.4,
     y: 0.85,
     w: 9.2,
