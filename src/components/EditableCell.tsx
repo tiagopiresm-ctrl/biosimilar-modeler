@@ -43,9 +43,17 @@ export function EditableCell({ value, onChange, onPasteRange, format = 'number',
     return value.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   }, [value, format, decimals]);
 
+  const handleClick = () => {
+    if (disabled) return;
+    setEditing(true);
+    // Clear the value so user can immediately type a new one
+    setEditValue('');
+  };
+
   const handleDoubleClick = () => {
     if (disabled) return;
     setEditing(true);
+    // Double-click: keep the existing value for fine-tuning
     if (format === 'percent') {
       setEditValue((value * 100).toFixed(decimals));
     } else {
@@ -55,6 +63,8 @@ export function EditableCell({ value, onChange, onPasteRange, format = 'number',
 
   const handleBlur = () => {
     setEditing(false);
+    // If empty (user clicked but didn't type), keep original value
+    if (editValue.trim() === '') return;
     const parsed = parseFloat(editValue);
     if (!isNaN(parsed)) {
       if (format === 'percent') {
@@ -123,10 +133,11 @@ export function EditableCell({ value, onChange, onPasteRange, format = 'number',
   return (
     <div
       tabIndex={disabled ? undefined : 0}
+      onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onPaste={handlePaste}
-      className={`input-cell select-none ${disabled ? 'opacity-50 cursor-default' : ''} ${className}`}
-      title={disabled ? 'Read-only' : 'Double-click to edit · Click + paste from Excel'}
+      className={`input-cell select-none cursor-pointer ${disabled ? 'opacity-50 !cursor-default' : ''} ${className}`}
+      title={disabled ? 'Read-only' : 'Click to replace · Double-click to edit · Paste from Excel'}
     >
       {displayValue()}
     </div>
