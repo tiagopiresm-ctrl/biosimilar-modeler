@@ -115,6 +115,8 @@ export function resizePLAssumptions(
     rAndD: resizeScenarioRow(pl.rAndD, oldPc, newPc, 0),
     dAndA: resizeScenarioRow(pl.dAndA, oldPc, newPc, 0),
     taxRate: resizeScenarioRow(pl.taxRate, oldPc, newPc, 0.25),
+    financialCosts: resizeScenarioRow(pl.financialCosts, oldPc, newPc, 0),
+    otherIncome: resizeScenarioRow(pl.otherIncome, oldPc, newPc, 0),
   };
 }
 
