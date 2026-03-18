@@ -193,6 +193,8 @@ function flattenToBase(state: ModelState): Partial<ModelState> {
     rAndD: flatRow(state.plAssumptions.rAndD),
     dAndA: flatRow(state.plAssumptions.dAndA),
     taxRate: flatRow(state.plAssumptions.taxRate),
+    financialCosts: state.plAssumptions.financialCosts ? flatRow(state.plAssumptions.financialCosts) : { bear: [], base: [], bull: [] },
+    otherIncome: state.plAssumptions.otherIncome ? flatRow(state.plAssumptions.otherIncome) : { bear: [], base: [], bull: [] },
   };
 
   const waccInputs: WACCInputs = {

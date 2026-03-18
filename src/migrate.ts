@@ -19,7 +19,7 @@ import { resizeModelState } from './periodResize';
 import { COUNTRY_CURRENCY_MAP } from './ecbFxData';
 
 /** Single source of truth for the current model version. */
-export const CURRENT_MODEL_VERSION = 16;
+export const CURRENT_MODEL_VERSION = 17;
 
 // ---- Validation ----
 
@@ -298,6 +298,22 @@ export function migrateState(persisted: unknown, fromVersion: number): ModelStat
       fixedSupplyPricePerGram: (c as any).fixedSupplyPricePerGram ?? createScenarioRow(0, pc.numPeriods),
     }));
     state.config = { ...state.config, modelVersion: 16 };
+  }
+
+  // Migrate from v16 to v17: add cogsOverheadPct, cogsMarkupPct, financialCosts, otherIncome
+  if (fromVersion < 17) {
+    const pc = computePeriodConfig(state.config);
+    state.config = {
+      ...state.config,
+      cogsOverheadPct: (state.config as any).cogsOverheadPct ?? 0.15,
+      cogsMarkupPct: (state.config as any).cogsMarkupPct ?? 0,
+      modelVersion: 17,
+    };
+    state.plAssumptions = {
+      ...state.plAssumptions,
+      financialCosts: (state.plAssumptions as any).financialCosts ?? createScenarioRow(0, pc.numPeriods),
+      otherIncome: (state.plAssumptions as any).otherIncome ?? createScenarioRow(0, pc.numPeriods),
+    };
   }
 
   return state as ModelState;

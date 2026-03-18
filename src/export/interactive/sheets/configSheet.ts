@@ -136,25 +136,33 @@ export function addInteractiveConfigSheet(
   writeKV(20, 'COGS Inflation Rate %', config.cogsInflationRate, NUM_FMT.percent);
   cellMap.registerScalar('config', 'cogsInflation', 'Config', 'B20');
 
-  // Row 21: blank
+  // Row 21: COGS Overhead %
+  writeKV(21, 'COGS Overhead %', config.cogsOverheadPct ?? 0.15, NUM_FMT.percent);
+  cellMap.registerScalar('config', 'cogsOverhead', 'Config', 'B21');
 
-  // ── Row 22: Volume Forecast ──
-  section(22, 'Volume Forecast');
+  // Row 22: COGS Markup %
+  writeKV(22, 'COGS Markup %', config.cogsMarkupPct ?? 0, NUM_FMT.percent);
+  cellMap.registerScalar('config', 'cogsMarkup', 'Config', 'B22');
 
-  // Row 23: Forecast Method
-  writeKV(23, 'Forecast Method', config.volumeForecastMethod);
+  // Row 23: blank
 
-  // Row 24: Volume Multiplier
-  writeKV(24, 'Volume Multiplier', config.volumeMultiplier);
+  // ── Row 24: Volume Forecast ──
+  section(24, 'Volume Forecast');
 
-  // Row 25: blank
+  // Row 25: Forecast Method
+  writeKV(25, 'Forecast Method', config.volumeForecastMethod);
 
-  // ── Row 26: Countries ──
-  section(26, 'Countries');
+  // Row 26: Volume Multiplier
+  writeKV(26, 'Volume Multiplier', config.volumeMultiplier);
 
-  // Rows 27+: Country list
+  // Row 27: blank
+
+  // ── Row 28: Countries ──
+  section(28, 'Countries');
+
+  // Rows 29+: Country list
   for (let i = 0; i < countries.length; i++) {
-    const row = 27 + i;
+    const row = 29 + i;
     const lbl = ws.getCell(row, 1);
     lbl.value = countries[i].name;
     lbl.font = LABEL_FONT;

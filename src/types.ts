@@ -118,6 +118,8 @@ export interface ModelConfig {
   apiPricingModel: ApiPricingModel; // 'percentage' or 'fixed'
   apiCostPerGram: number;          // cost per gram of API (model currency, e.g. €180)
   cogsInflationRate: number;       // annual COGS inflation rate (decimal, e.g. 0.025 = 2.5%)
+  cogsOverheadPct: number;         // COGS other expenses / overhead % (decimal, e.g. 0.15 = 15%)
+  cogsMarkupPct: number;           // COGS internal markup % (decimal, e.g. 0.40 = 40%)
   // Timeline controls (global)
   modelStartYear: number;           // e.g. 2022 — first year of the model timeline
   forecastStartYear: number;        // e.g. 2026 — first forecast year (years before are historical)
@@ -143,6 +145,8 @@ export interface PLAssumptions {
   rAndD: ScenarioRow;            // currency'000 absolute
   dAndA: ScenarioRow;            // currency'000 absolute
   taxRate: ScenarioRow;          // % (decimal)
+  financialCosts: ScenarioRow;   // currency'000 absolute (interest, bank fees, etc.)
+  otherIncome: ScenarioRow;      // currency'000 absolute (non-product income)
 }
 
 // ---- PER-COUNTRY ASSUMPTIONS ----
@@ -264,6 +268,7 @@ export interface PLOutputs {
   totalMilestoneIncome: PeriodArray;
   totalRevenue: PeriodArray;
   cogs: PeriodArray;
+  otherIncome: PeriodArray;
   grossProfit: PeriodArray;
   grossMargin: PeriodArray;
   commercialSales: PeriodArray;
@@ -275,9 +280,12 @@ export interface PLOutputs {
   dAndA: PeriodArray;
   ebit: PeriodArray;
   ebitMargin: PeriodArray;
+  financialCosts: PeriodArray;
+  ebt: PeriodArray;
   incomeTax: PeriodArray;
   netIncome: PeriodArray;
   netIncomeMargin: PeriodArray;
+  cumulativeNetIncome: PeriodArray;
   workingCapitalChange: PeriodArray;
   capitalExpenditure: PeriodArray;
   freeCashFlow: PeriodArray;

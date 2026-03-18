@@ -84,6 +84,26 @@ export function addInteractivePLAssumptionsSheet(
   );
   row = trResult.nextRow;
 
+  // ── Financial Costs ──
+  writeSection(ws, row, 'Financial Costs', colCount);
+  row++;
+  const fcResult = writeScenarioBlock(
+    ws, row, 'Financial Costs', plAssumptions.financialCosts,
+    NP, cellMap, sheetKey, 'financialCosts', NUM_FMT.integer,
+    activeScenarioRef, activeScenarioIdx,
+  );
+  row = fcResult.nextRow;
+
+  // ── Other Income ──
+  writeSection(ws, row, 'Other Income', colCount);
+  row++;
+  const oiResult = writeScenarioBlock(
+    ws, row, 'Other Income', plAssumptions.otherIncome,
+    NP, cellMap, sheetKey, 'otherIncome', NUM_FMT.integer,
+    activeScenarioRef, activeScenarioIdx,
+  );
+  row = oiResult.nextRow;
+
   // ── FCF Bridge ──
   writeSection(ws, row, 'FCF Bridge Inputs', colCount);
   row++;

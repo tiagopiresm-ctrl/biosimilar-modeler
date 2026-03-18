@@ -108,7 +108,10 @@ export function addInteractivePLSheet(
 
   const apiCostRef = cellMap.getScalar('config', 'apiCostPerGram').toFormula();
   const cogsInflRef = cellMap.getScalar('config', 'cogsInflation').toFormula();
+  const cogsOverheadRef = cellMap.getScalar('config', 'cogsOverhead').toFormula();
+  const cogsMarkupRef = cellMap.getScalar('config', 'cogsMarkup').toFormula();
 
+  // #2: COGS now includes overhead % and markup %
   writeFormulaRow(ws, row, 'COGS', NP, (p) => {
     if (p < earliestLoeIdx) return '0';
     const yearsFromLOE = p - earliestLoeIdx;
@@ -116,15 +119,22 @@ export function addInteractivePLSheet(
       cellMap.get(`countryModel_${ci}`, 'apiGramsSupplied', p).toFormula(),
     );
     const gramsSum = gramsRefs.length === 1 ? gramsRefs[0] : `(${gramsRefs.join('+')})`;
-    return `-(${apiCostRef}*POWER(1+${cogsInflRef},${yearsFromLOE})*${gramsSum})`;
+    return `-(${apiCostRef}*POWER(1+${cogsInflRef},${yearsFromLOE})*(1+${cogsOverheadRef})*(1+${cogsMarkupRef})*${gramsSum})`;
   }, plOutputs.cogs, cellMap, sheetKey, 'cogs', NUM_FMT.integer);
   row++;
 
-  // Gross Profit
+  // #6: Other Income
+  writeFormulaRow(ws, row, 'Other Income', NP, (p) => {
+    return cellMap.get('plAssumptions', 'otherIncome_active', p).toFormula();
+  }, plOutputs.otherIncome, cellMap, sheetKey, 'otherIncome', NUM_FMT.integer);
+  row++;
+
+  // Gross Profit (includes Other Income)
   writeFormulaRow(ws, row, 'Gross Profit', NP, (p) => {
     const rev = cellMap.get(sheetKey, 'totalRevenue', p).toLocal();
     const cogs = cellMap.get(sheetKey, 'cogs', p).toLocal();
-    return `${rev}+${cogs}`;
+    const oi = cellMap.get(sheetKey, 'otherIncome', p).toLocal();
+    return `${rev}+${cogs}+${oi}`;
   }, plOutputs.grossProfit, cellMap, sheetKey, 'grossProfit', NUM_FMT.integer, true);
   row++;
 
@@ -223,19 +233,34 @@ export function addInteractivePLSheet(
   }, plOutputs.ebitMargin, cellMap, sheetKey, 'ebitMargin', NUM_FMT.percent);
   row++;
 
-  // Income Tax
-  writeFormulaRow(ws, row, 'Income Tax', NP, (p) => {
+  // #3: Financial Costs
+  writeFormulaRow(ws, row, 'Financial Costs', NP, (p) => {
+    const ref = cellMap.get('plAssumptions', 'financialCosts_active', p).toFormula();
+    return `-ABS(${ref})`;
+  }, plOutputs.financialCosts, cellMap, sheetKey, 'financialCosts', NUM_FMT.integer);
+  row++;
+
+  // EBT (Earnings Before Tax)
+  writeFormulaRow(ws, row, 'EBT', NP, (p) => {
     const ebit = cellMap.get(sheetKey, 'ebit', p).toLocal();
+    const fc = cellMap.get(sheetKey, 'financialCosts', p).toLocal();
+    return `${ebit}+${fc}`;
+  }, plOutputs.ebt, cellMap, sheetKey, 'ebt', NUM_FMT.integer, true);
+  row++;
+
+  // Income Tax (on EBT)
+  writeFormulaRow(ws, row, 'Income Tax', NP, (p) => {
+    const ebt = cellMap.get(sheetKey, 'ebt', p).toLocal();
     const taxRate = cellMap.get('plAssumptions', 'taxRate_active', p).toFormula();
-    return `IF(${ebit}>0,-${ebit}*${taxRate},0)`;
+    return `IF(${ebt}>0,-${ebt}*${taxRate},0)`;
   }, plOutputs.incomeTax, cellMap, sheetKey, 'incomeTax', NUM_FMT.integer);
   row++;
 
   // Net Income
   writeFormulaRow(ws, row, 'Net Income', NP, (p) => {
-    const ebit = cellMap.get(sheetKey, 'ebit', p).toLocal();
+    const ebt = cellMap.get(sheetKey, 'ebt', p).toLocal();
     const tax = cellMap.get(sheetKey, 'incomeTax', p).toLocal();
-    return `${ebit}+${tax}`;
+    return `${ebt}+${tax}`;
   }, plOutputs.netIncome, cellMap, sheetKey, 'netIncome', NUM_FMT.integer, true);
   row++;
 
@@ -245,6 +270,15 @@ export function addInteractivePLSheet(
     const rev = cellMap.get(sheetKey, 'totalRevenue', p).toLocal();
     return `IFERROR(${ni}/${rev},0)`;
   }, plOutputs.netIncomeMargin, cellMap, sheetKey, 'netIncomeMargin', NUM_FMT.percent);
+  row++;
+
+  // #5: Cumulative Net Income
+  writeFormulaRow(ws, row, 'Cumulative Net Income', NP, (p) => {
+    const ni = cellMap.get(sheetKey, 'netIncome', p).toLocal();
+    if (p === 0) return ni;
+    const prev = cellMap.get(sheetKey, 'cumulativeNetIncome', p - 1).toLocal();
+    return `${prev}+${ni}`;
+  }, plOutputs.cumulativeNetIncome, cellMap, sheetKey, 'cumulativeNetIncome', NUM_FMT.integer, true);
   row++;
 
   // Blank

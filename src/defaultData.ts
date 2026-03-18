@@ -199,11 +199,13 @@ export function createDefaultConfig(): ModelConfig {
     apiPricingModel: 'percentage',
     apiCostPerGram: 5,              // €5 per gram of API (matches seed data price levels)
     cogsInflationRate: 0.025,       // 2.5% annual COGS inflation
+    cogsOverheadPct: 0.15,          // 15% other expenses / overhead
+    cogsMarkupPct: 0,               // 0% internal markup (set to 0.40 for 40%)
     modelStartYear: new Date().getFullYear() - 4,    // e.g. 2022
     forecastStartYear: new Date().getFullYear(),      // e.g. 2026
     forecastEndYear: 2040,                            // explicit end year
     volumeForecastMethod: 'growth',
-    modelVersion: 16,  // Must match CURRENT_MODEL_VERSION in migrate.ts
+    modelVersion: 17,  // Must match CURRENT_MODEL_VERSION in migrate.ts
   };
 }
 
@@ -353,12 +355,20 @@ export function createDefaultPLAssumptions(numPeriods = DEFAULT_NUM_PERIODS): PL
   const taxBase = pct(Array.from({ length: numPeriods }, () => 25), numPeriods);
   const taxBull = pct(Array.from({ length: numPeriods }, () => 23), numPeriods);
 
+  // Financial Costs (currency '000 absolute — interest, bank fees, etc.)
+  const finCostZero = createPeriodArray(0, numPeriods);
+
+  // Other Income (currency '000 absolute — non-product income, grants, etc.)
+  const otherIncZero = createPeriodArray(0, numPeriods);
+
   return {
     commercialSales: scenarioRowFrom(commBear, commBase, commBull),
     gAndA: scenarioRowFrom(gaBear, gaBase, gaBull),
     rAndD: scenarioRowFrom(rdBear, rdBase, rdBull),
     dAndA: scenarioRowFrom(daBear, daBase, daBull),
     taxRate: scenarioRowFrom(taxBear, taxBase, taxBull),
+    financialCosts: scenarioRowFrom([...finCostZero], [...finCostZero], [...finCostZero]),
+    otherIncome: scenarioRowFrom([...otherIncZero], [...otherIncZero], [...otherIncZero]),
   };
 }
 

@@ -435,13 +435,12 @@ export function computePLOutputs(
     );
   }
 
-  // ---- COGS (Volume-driven: cost/gram × inflation × total API grams) ----
-  // apiGramsSupplied is in '000 grams (volume is in '000 units ÷ units/gram = '000 grams)
-  // costPerGram is in currency/gram
-  // product: currency/gram × '000 grams = currency'000 (already in P&L units — no /1000)
-  // Only applies from earliest LOE onwards; before that, cogs = 0
+  // ---- COGS (Volume-driven: cost/gram × inflation × overhead × markup × total API grams) ----
+  // #2: Added overhead % and markup % to COGS calculation (matches company Excel COPs structure)
   const apiCostPerGram = config.apiCostPerGram;
   const cogsInflation = config.cogsInflationRate;
+  const cogsOverhead = config.cogsOverheadPct ?? 0;
+  const cogsMarkup = config.cogsMarkupPct ?? 0;
   const cogs = createPeriodArray(0, NP);
   const earliestLoeIdx = getEarliestLoeIndex(countries, pc.startYear);
 
@@ -452,16 +451,29 @@ export function computePLOutputs(
         totalGrams += countryOutputs[c].apiGramsSupplied[i];
       }
       const yearsFromLOE = i - earliestLoeIdx;
-      const costPerGramAtT = apiCostPerGram * Math.pow(1 + cogsInflation, yearsFromLOE);
+      // Base cost × inflation → Real COGs → ×(1+overhead) → ×(1+markup) → Final COGs
+      const costPerGramAtT = apiCostPerGram
+        * Math.pow(1 + cogsInflation, yearsFromLOE)
+        * (1 + cogsOverhead)
+        * (1 + cogsMarkup);
       cogs[i] = safeNumber(-(costPerGramAtT * totalGrams));
     }
   }
 
-  // ---- Gross Profit ----
+  // ---- #6: Other Income (non-product revenue: grants, license fees, etc.) ----
+  const otherIncomeArr = plAssumptions.otherIncome
+    ? getActiveRow(plAssumptions.otherIncome, s)
+    : createPeriodArray(0, NP);
+  const otherIncome = createPeriodArray(0, NP);
+  for (let i = 0; i < NP; i++) {
+    otherIncome[i] = safeNumber(otherIncomeArr[i] ?? 0);
+  }
+
+  // ---- Gross Profit (includes Other Income) ----
   const grossProfit = createPeriodArray(0, NP);
   const grossMargin = createPeriodArray(0, NP);
   for (let i = 0; i < NP; i++) {
-    grossProfit[i] = safeNumber(totalRevenue[i] + cogs[i]);
+    grossProfit[i] = safeNumber(totalRevenue[i] + cogs[i] + otherIncome[i]);
     grossMargin[i] = safeDivide(grossProfit[i], totalRevenue[i]);
   }
 
@@ -504,19 +516,39 @@ export function computePLOutputs(
     ebitMargin[i] = safeDivide(ebit[i], totalRevenue[i]);
   }
 
-  // ---- Income Tax ----
+  // ---- #3: Financial Costs (interest, bank fees, etc.) ----
+  const financialCostsArr = plAssumptions.financialCosts
+    ? getActiveRow(plAssumptions.financialCosts, s)
+    : createPeriodArray(0, NP);
+  const financialCosts = createPeriodArray(0, NP);
+  const ebt = createPeriodArray(0, NP);
+
+  for (let i = 0; i < NP; i++) {
+    financialCosts[i] = safeNumber(-Math.abs(financialCostsArr[i] ?? 0));
+    ebt[i] = safeNumber(ebit[i] + financialCosts[i]);
+  }
+
+  // ---- Income Tax (on EBT, not EBIT) ----
   const taxRateArr = getActiveRow(plAssumptions.taxRate, s);
   const incomeTax = createPeriodArray(0, NP);
   for (let i = 0; i < NP; i++) {
-    incomeTax[i] = ebit[i] > 0 ? safeNumber(-ebit[i] * taxRateArr[i]) : 0;
+    incomeTax[i] = ebt[i] > 0 ? safeNumber(-ebt[i] * taxRateArr[i]) : 0;
   }
 
   // ---- Net Income ----
   const netIncome = createPeriodArray(0, NP);
   const netIncomeMargin = createPeriodArray(0, NP);
   for (let i = 0; i < NP; i++) {
-    netIncome[i] = safeNumber(ebit[i] + incomeTax[i]);
+    netIncome[i] = safeNumber(ebt[i] + incomeTax[i]);
     netIncomeMargin[i] = safeDivide(netIncome[i], totalRevenue[i]);
+  }
+
+  // ---- #5: Cumulative Net Income ----
+  const cumulativeNetIncome = createPeriodArray(0, NP);
+  for (let i = 0; i < NP; i++) {
+    cumulativeNetIncome[i] = i === 0
+      ? netIncome[0]
+      : safeNumber(cumulativeNetIncome[i - 1] + netIncome[i]);
   }
 
   // ---- Free Cash Flow ----
@@ -548,6 +580,7 @@ export function computePLOutputs(
     totalMilestoneIncome,
     totalRevenue,
     cogs,
+    otherIncome,
     grossProfit,
     grossMargin,
     commercialSales,
@@ -559,9 +592,12 @@ export function computePLOutputs(
     dAndA,
     ebit,
     ebitMargin,
+    financialCosts,
+    ebt,
     incomeTax,
     netIncome,
     netIncomeMargin,
+    cumulativeNetIncome,
     workingCapitalChange,
     capitalExpenditure,
     freeCashFlow,
