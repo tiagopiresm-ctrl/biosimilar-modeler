@@ -435,6 +435,42 @@ export function computePLOutputs(
     );
   }
 
+  // ---- Tiered Royalty Override ----
+  // If useFixedRoyaltyRate is false, replace totalRoyaltyIncome with tiered marginal royalties
+  // based on global (FX-converted) partner net sales
+  if (!config.useFixedRoyaltyRate && config.royaltyTiers && config.royaltyTiers.length > 0) {
+    const tiers = config.royaltyTiers;
+    for (let i = 0; i < NP; i++) {
+      // Compute global partner net sales (FX-converted to model currency)
+      let globalPNS = 0;
+      for (let c = 0; c < countryOutputs.length; c++) {
+        const fxRate = countries[c]?.fxRate[i] ?? 1;
+        const fx = fxRate !== 0 ? fxRate : 1;
+        globalPNS += safeDivide(countryOutputs[c].partnerNetSales[i], fx);
+      }
+
+      // Apply tiered marginal rates
+      let tieredRoyalty = 0;
+      let remaining = globalPNS;
+      let prevThreshold = 0;
+      for (const tier of tiers) {
+        if (remaining <= 0) break;
+        const bracketSize = tier.threshold - prevThreshold;
+        const applicable = Math.min(remaining, bracketSize);
+        tieredRoyalty += applicable * tier.rate;
+        remaining -= applicable;
+        prevThreshold = tier.threshold;
+      }
+
+      totalRoyaltyIncome[i] = safeNumber(tieredRoyalty);
+
+      // Recalculate totalRevenue for this period
+      totalRevenue[i] = safeNumber(
+        totalNetSupplyRevenue[i] + totalRoyaltyIncome[i] + totalMilestoneIncome[i],
+      );
+    }
+  }
+
   // ---- COGS (Volume-driven: cost/gram × inflation × overhead × markup × total API grams) ----
   // #2: Added overhead % and markup % to COGS calculation (matches company Excel COPs structure)
   const apiCostPerGram = config.apiCostPerGram;

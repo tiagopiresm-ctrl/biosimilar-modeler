@@ -205,7 +205,15 @@ export function createDefaultConfig(): ModelConfig {
     forecastStartYear: new Date().getFullYear(),      // e.g. 2026
     forecastEndYear: 2040,                            // explicit end year
     volumeForecastMethod: 'growth',
-    modelVersion: 17,  // Must match CURRENT_MODEL_VERSION in migrate.ts
+    royaltyTiers: [
+      { threshold: 250000, rate: 0 },
+      { threshold: 750000, rate: 0 },
+      { threshold: 1250000, rate: 0 },
+      { threshold: 1750000, rate: 0 },
+      { threshold: 99999999, rate: 0 },
+    ],
+    useFixedRoyaltyRate: true,  // default to existing flat rate behavior
+    modelVersion: 18,  // Must match CURRENT_MODEL_VERSION in migrate.ts
   };
 }
 

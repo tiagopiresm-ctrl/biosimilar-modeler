@@ -157,12 +157,34 @@ export function addInteractiveConfigSheet(
 
   // Row 27: blank
 
-  // ── Row 28: Countries ──
-  section(28, 'Countries');
+  // ── Row 28: Royalty Tiers ──
+  section(28, 'Royalty Tiers');
 
-  // Rows 29+: Country list
+  // Row 29: Use Fixed Royalty Rate (toggle)
+  writeKV(29, 'Use Fixed Royalty Rate', config.useFixedRoyaltyRate ? 1 : 0, NUM_FMT.integer);
+  cellMap.registerScalar('config', 'useFixedRoyaltyRate', 'Config', 'B29');
+
+  // Rows 30-34: Tier thresholds and rates (5 tiers)
+  const tiers = config.royaltyTiers ?? [];
+  for (let t = 0; t < 5; t++) {
+    const tierRow = 30 + t * 2;
+    const tier = tiers[t] ?? { threshold: 0, rate: 0 };
+
+    writeKV(tierRow, `Tier ${t + 1} Threshold ('000 ${config.currency})`, tier.threshold, NUM_FMT.integer);
+    cellMap.registerScalar('config', `royaltyTier_${t}_threshold`, 'Config', `B${tierRow}`);
+
+    writeKV(tierRow + 1, `Tier ${t + 1} Rate`, tier.rate, NUM_FMT.percent);
+    cellMap.registerScalar('config', `royaltyTier_${t}_rate`, 'Config', `B${tierRow + 1}`);
+  }
+
+  // Row 40: blank
+
+  // ── Row 41: Countries ──
+  section(41, 'Countries');
+
+  // Rows 42+: Country list
   for (let i = 0; i < countries.length; i++) {
-    const row = 29 + i;
+    const row = 42 + i;
     const lbl = ws.getCell(row, 1);
     lbl.value = countries[i].name;
     lbl.font = LABEL_FONT;

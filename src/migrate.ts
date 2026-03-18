@@ -19,7 +19,7 @@ import { resizeModelState } from './periodResize';
 import { COUNTRY_CURRENCY_MAP } from './ecbFxData';
 
 /** Single source of truth for the current model version. */
-export const CURRENT_MODEL_VERSION = 17;
+export const CURRENT_MODEL_VERSION = 18;
 
 // ---- Validation ----
 
@@ -313,6 +313,22 @@ export function migrateState(persisted: unknown, fromVersion: number): ModelStat
       ...state.plAssumptions,
       financialCosts: (state.plAssumptions as any).financialCosts ?? createScenarioRow(0, pc.numPeriods),
       otherIncome: (state.plAssumptions as any).otherIncome ?? createScenarioRow(0, pc.numPeriods),
+    };
+  }
+
+  // Migrate from v17 to v18: add royaltyTiers and useFixedRoyaltyRate to config
+  if (fromVersion < 18) {
+    state.config = {
+      ...state.config,
+      royaltyTiers: (state.config as any).royaltyTiers ?? [
+        { threshold: 250000, rate: 0 },
+        { threshold: 750000, rate: 0 },
+        { threshold: 1250000, rate: 0 },
+        { threshold: 1750000, rate: 0 },
+        { threshold: 99999999, rate: 0 },
+      ],
+      useFixedRoyaltyRate: (state.config as any).useFixedRoyaltyRate ?? true,
+      modelVersion: 18,
     };
   }
 

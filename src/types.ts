@@ -104,6 +104,12 @@ export const API_PRICING_MODEL_LABELS: Record<ApiPricingModel, string> = {
   fixed: 'Fixed Price per Gram',
 };
 
+// ---- ROYALTY TIERS ----
+export interface RoyaltyTier {
+  threshold: number;  // '000 EUR cumulative sales threshold
+  rate: number;       // royalty rate (decimal, e.g. 0.05 = 5%)
+}
+
 // ---- MODEL CONFIGURATION ----
 export interface ModelConfig {
   moleculeName: string;
@@ -126,6 +132,9 @@ export interface ModelConfig {
   forecastEndYear: number;          // e.g. 2040 — last year of the model (replaces hardcoded loeYear+10)
   // Volume forecast method (global — applies to all countries)
   volumeForecastMethod: VolumeForecastMethod;
+  // Tiered Royalties
+  royaltyTiers: RoyaltyTier[];  // tiered royalty thresholds (applied to global partner net sales)
+  useFixedRoyaltyRate: boolean; // if true, use per-country royaltyRatePct instead of tiers
   // Version for localStorage migration
   modelVersion: number;
 }
