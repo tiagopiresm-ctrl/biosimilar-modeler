@@ -153,11 +153,17 @@ interface StoreActions {
     value: string | number | boolean,
   ) => void;
 
-  // Royalty Tiers
-  updateRoyaltyTier: (
+  // Royalty Tiers (per-country)
+  updateCountryRoyaltyTier: (
+    countryIndex: number,
     tierIndex: number,
     field: 'threshold' | 'rate',
     value: number,
+  ) => void;
+
+  updateCountryUseFixedRoyaltyRate: (
+    countryIndex: number,
+    value: boolean,
   ) => void;
 
   // Import / Export
@@ -476,13 +482,25 @@ export const useStore = create<ModelState & StoreActions>()(
           return { countries };
         }),
 
-      // ---- Royalty Tiers ----
-      updateRoyaltyTier: (tierIndex: number, field: 'threshold' | 'rate', value: number) =>
+      // ---- Royalty Tiers (per-country) ----
+      updateCountryRoyaltyTier: (countryIndex: number, tierIndex: number, field: 'threshold' | 'rate', value: number) =>
         set((state) => {
-          const royaltyTiers = state.config.royaltyTiers.map((tier, i) =>
+          const countries = [...state.countries];
+          const country = { ...countries[countryIndex] };
+          country.royaltyTiers = country.royaltyTiers.map((tier, i) =>
             i === tierIndex ? { ...tier, [field]: value } : tier,
           );
-          return { config: { ...state.config, royaltyTiers } };
+          countries[countryIndex] = country;
+          return { countries };
+        }),
+
+      updateCountryUseFixedRoyaltyRate: (countryIndex: number, value: boolean) =>
+        set((state) => {
+          const countries = [...state.countries];
+          const country = { ...countries[countryIndex] };
+          country.useFixedRoyaltyRate = value;
+          countries[countryIndex] = country;
+          return { countries };
         }),
 
       // ---- Config ----

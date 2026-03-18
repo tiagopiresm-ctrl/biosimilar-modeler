@@ -325,11 +325,39 @@ function buildCountryModelSheet(
   }, co.netSupplyRevenue, cellMap, sheetKey, 'netSupplyRevenue', NUM_FMT.integer, true);
   row++;
 
-  // 25. Royalty Income
-  writeFormulaRow(ws, row, 'Royalty Income', NP, (p) => {
+  // 25. Royalty Income (flat — used when useFixedRoyaltyRate=1)
+  writeFormulaRow(ws, row, 'Royalty (Flat)', NP, (p) => {
     const partnerNS = cellMap.get(sheetKey, 'partnerNetSales', p).toLocal();
     const royaltyPct = cellMap.get(inputKey, 'royaltyRatePct_active', p).toFormula();
     return `${partnerNS}*${royaltyPct}`;
+  }, co.royaltyIncome, cellMap, sheetKey, 'royaltyFlat', NUM_FMT.integer);
+  row++;
+
+  // 25b. Royalty Income (tiered — cumulative per-country PNS, ratchet logic via marginal tiers)
+  writeFormulaRow(ws, row, 'Royalty (Tiered)', NP, (p) => {
+    const partnerNS = cellMap.get(sheetKey, 'partnerNetSales', p).toLocal();
+    // Build marginal tier formula using per-country tier thresholds and rates
+    const tierFormulas: string[] = [];
+    for (let t = 0; t < 5; t++) {
+      const threshRef = cellMap.getScalar(inputKey, `royaltyTier_${t}_threshold`).toFormula();
+      const rateRef = cellMap.getScalar(inputKey, `royaltyTier_${t}_rate`).toFormula();
+      if (t === 0) {
+        tierFormulas.push(`MIN(${partnerNS},${threshRef})*${rateRef}`);
+      } else {
+        const prevThreshRef = cellMap.getScalar(inputKey, `royaltyTier_${t - 1}_threshold`).toFormula();
+        tierFormulas.push(`MAX(0,MIN(${partnerNS},${threshRef})-${prevThreshRef})*${rateRef}`);
+      }
+    }
+    return tierFormulas.join('+');
+  }, co.royaltyIncome, cellMap, sheetKey, 'royaltyTiered', NUM_FMT.integer);
+  row++;
+
+  // 25c. Royalty Income (switch: IF useFixedRoyaltyRate=1 then flat, else tiered)
+  const useFixedRef = cellMap.getScalar(inputKey, 'useFixedRoyaltyRate').toFormula();
+  writeFormulaRow(ws, row, 'Royalty Income', NP, (p) => {
+    const flat = cellMap.get(sheetKey, 'royaltyFlat', p).toLocal();
+    const tiered = cellMap.get(sheetKey, 'royaltyTiered', p).toLocal();
+    return `IF(${useFixedRef}=1,${flat},${tiered})`;
   }, co.royaltyIncome, cellMap, sheetKey, 'royaltyIncome', NUM_FMT.integer);
   row++;
 

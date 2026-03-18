@@ -132,9 +132,6 @@ export interface ModelConfig {
   forecastEndYear: number;          // e.g. 2040 — last year of the model (replaces hardcoded loeYear+10)
   // Volume forecast method (global — applies to all countries)
   volumeForecastMethod: VolumeForecastMethod;
-  // Tiered Royalties
-  royaltyTiers: RoyaltyTier[];  // tiered royalty thresholds (applied to global partner net sales)
-  useFixedRoyaltyRate: boolean; // if true, use per-country royaltyRatePct instead of tiers
   // Version for localStorage migration
   modelVersion: number;
 }
@@ -192,6 +189,9 @@ export interface CountryAssumptions {
   fixedSupplyPricePerGram: ScenarioRow;  // EUR/gram fixed supply price to partner (Mode 2, always in model currency)
   royaltyRatePct: ScenarioRow;           // % of partner NET sales (decimal)
   milestonePayments: PeriodArray;        // model-currency'000 (not scenario-driven, always EUR)
+  // Tiered Royalties (per-country)
+  royaltyTiers: RoyaltyTier[];           // tiered royalty thresholds (applied to this country's cumulative partner net sales)
+  useFixedRoyaltyRate: boolean;          // if true, use flat royaltyRatePct; if false, use tiered structure
 }
 
 // ---- WACC ----

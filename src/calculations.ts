@@ -327,11 +327,42 @@ export function computeCountryOutputs(
     gtnDeduction[i] = 0;
     netSupplyRevenue[i] = grossSupplyRevenue[i];
 
-    // 7. Royalty Income = % of Partner Net Sales (available in both modes)
-    royaltyIncome[i] = safeNumber(partnerNetSales[i] * royaltyRatePctArr[i]);
+    // 7. Royalty Income — depends on country's useFixedRoyaltyRate toggle
+    //    If fixed: flat % of Partner Net Sales
+    //    If tiered: computed below after the loop (needs cumulative tracking)
+    if (country.useFixedRoyaltyRate) {
+      royaltyIncome[i] = safeNumber(partnerNetSales[i] * royaltyRatePctArr[i]);
+    }
+    // Tiered royalty is computed in a second pass below
 
     // 8. Milestone payments (not scenario-driven)
     milestoneIncome[i] = safeNumber(country.milestonePayments[i] ?? 0);
+  }
+
+  // ---- Tiered Royalty (per-country, cumulative ratchet) ----
+  if (!country.useFixedRoyaltyRate && country.royaltyTiers && country.royaltyTiers.length > 0) {
+    const tiers = [...country.royaltyTiers].sort((a, b) => a.threshold - b.threshold);
+    let cumulativePNS = 0;
+    let highestTierRate = 0;
+
+    for (let i = 0; i < NP; i++) {
+      if (i < country.biosimilarLaunchPeriodIndex) continue;
+
+      const annualPNS = partnerNetSales[i];
+      cumulativePNS += annualPNS;
+
+      let tierRate = 0;
+      for (const tier of tiers) {
+        if (cumulativePNS >= tier.threshold) {
+          tierRate = tier.rate;
+        } else {
+          break;
+        }
+      }
+
+      highestTierRate = Math.max(highestTierRate, tierRate);
+      royaltyIncome[i] = safeNumber(annualPNS * highestTierRate);
+    }
   }
 
   // ---- E. Checks ----
@@ -433,49 +464,6 @@ export function computePLOutputs(
     totalRevenue[i] = safeNumber(
       totalNetSupplyRevenue[i] + totalRoyaltyIncome[i] + totalMilestoneIncome[i],
     );
-  }
-
-  // ---- Tiered Royalty Override ----
-  // Cumulative ratchet: track lifetime partner net sales, find tier, apply flat rate to annual sales.
-  // Rate can only increase (ratchet up) — once a higher tier is reached, it stays there.
-  if (!config.useFixedRoyaltyRate && config.royaltyTiers && config.royaltyTiers.length > 0) {
-    const tiers = [...config.royaltyTiers].sort((a, b) => a.threshold - b.threshold);
-    let cumulativePNS = 0;
-    let highestTierRate = 0; // ratchet: rate can only go up
-
-    for (let i = 0; i < NP; i++) {
-      // Compute this year's global partner net sales (FX-converted to model currency)
-      let annualPNS = 0;
-      for (let c = 0; c < countryOutputs.length; c++) {
-        const fxRate = countries[c]?.fxRate[i] ?? 1;
-        const fx = fxRate !== 0 ? fxRate : 1;
-        annualPNS += safeDivide(countryOutputs[c].partnerNetSales[i], fx);
-      }
-
-      // Accumulate lifetime partner net sales
-      cumulativePNS += annualPNS;
-
-      // Find which tier the cumulative total falls into → get that tier's flat rate
-      let tierRate = 0;
-      for (const tier of tiers) {
-        if (cumulativePNS >= tier.threshold) {
-          tierRate = tier.rate; // keep checking — last matching tier wins
-        } else {
-          break; // thresholds are sorted, so stop at the first one we haven't reached
-        }
-      }
-
-      // Ratchet: rate can only increase, never decrease
-      highestTierRate = Math.max(highestTierRate, tierRate);
-
-      // Apply the ratcheted flat rate to this year's annual sales
-      totalRoyaltyIncome[i] = safeNumber(annualPNS * highestTierRate);
-
-      // Recalculate totalRevenue for this period
-      totalRevenue[i] = safeNumber(
-        totalNetSupplyRevenue[i] + totalRoyaltyIncome[i] + totalMilestoneIncome[i],
-      );
-    }
   }
 
   // ---- COGS (Volume-driven: cost/gram × inflation × overhead × markup × total API grams) ----

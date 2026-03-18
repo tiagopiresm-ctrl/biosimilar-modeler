@@ -19,7 +19,7 @@ import { resizeModelState } from './periodResize';
 import { COUNTRY_CURRENCY_MAP } from './ecbFxData';
 
 /** Single source of truth for the current model version. */
-export const CURRENT_MODEL_VERSION = 18;
+export const CURRENT_MODEL_VERSION = 19;
 
 // ---- Validation ----
 
@@ -316,20 +316,47 @@ export function migrateState(persisted: unknown, fromVersion: number): ModelStat
     };
   }
 
-  // Migrate from v17 to v18: add royaltyTiers and useFixedRoyaltyRate to config
+  // Migrate from v17 to v18: temporarily add royaltyTiers to config (moved to countries in v19)
   if (fromVersion < 18) {
-    state.config = {
-      ...state.config,
-      royaltyTiers: (state.config as any).royaltyTiers ?? [
-        { threshold: 250000, rate: 0 },
-        { threshold: 750000, rate: 0 },
-        { threshold: 1250000, rate: 0 },
-        { threshold: 1750000, rate: 0 },
-        { threshold: 99999999, rate: 0 },
-      ],
-      useFixedRoyaltyRate: (state.config as any).useFixedRoyaltyRate ?? true,
-      modelVersion: 18,
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg18 = state.config as any;
+    cfg18.royaltyTiers = cfg18.royaltyTiers ?? [
+      { threshold: 250000, rate: 0 },
+      { threshold: 750000, rate: 0 },
+      { threshold: 1250000, rate: 0 },
+      { threshold: 1750000, rate: 0 },
+      { threshold: 99999999, rate: 0 },
+    ];
+    cfg18.useFixedRoyaltyRate = cfg18.useFixedRoyaltyRate ?? true;
+    cfg18.modelVersion = 18;
+    state.config = { ...cfg18 };
+  }
+
+  // Migrate from v18 to v19: move royaltyTiers and useFixedRoyaltyRate from config to each country
+  if (fromVersion < 19) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg19 = state.config as any;
+    const globalTiers = cfg19.royaltyTiers ?? [
+      { threshold: 250000, rate: 0 },
+      { threshold: 750000, rate: 0 },
+      { threshold: 1250000, rate: 0 },
+      { threshold: 1750000, rate: 0 },
+      { threshold: 99999999, rate: 0 },
+    ];
+    const globalUseFixed = cfg19.useFixedRoyaltyRate ?? true;
+
+    // Copy global royalty settings to each country
+    state.countries = state.countries.map((c: CountryAssumptions) => ({
+      ...c,
+      royaltyTiers: (c as any).royaltyTiers ?? globalTiers.map((t: any) => ({ ...t })),
+      useFixedRoyaltyRate: (c as any).useFixedRoyaltyRate ?? globalUseFixed,
+    }));
+
+    // Remove from config
+    delete cfg19.royaltyTiers;
+    delete cfg19.useFixedRoyaltyRate;
+    cfg19.modelVersion = 19;
+    state.config = { ...cfg19 };
   }
 
   return state as ModelState;

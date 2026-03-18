@@ -246,6 +246,31 @@ function buildCountrySheet(
   row++;
 
   // ════════════════════════════════════════════════════════════
+  // Section: Royalty Structure
+  // ════════════════════════════════════════════════════════════
+  writeSection(ws, row, 'Royalty Structure', colCount);
+  row++;
+
+  // Use Fixed Royalty Rate (toggle)
+  writeScalarRow(ws, row, 'Use Fixed Royalty Rate (1=Yes, 0=No)', country.useFixedRoyaltyRate ? 1 : 0, cellMap, sheetKey, 'useFixedRoyaltyRate', NUM_FMT.integer);
+  row++;
+
+  // Tier thresholds and rates (5 tiers)
+  const tiers = country.royaltyTiers ?? [];
+  for (let t = 0; t < 5; t++) {
+    const tier = tiers[t] ?? { threshold: 0, rate: 0 };
+
+    writeScalarRow(ws, row, `Tier ${t + 1} Threshold`, tier.threshold, cellMap, sheetKey, `royaltyTier_${t}_threshold`, NUM_FMT.integer);
+    row++;
+
+    writeScalarRow(ws, row, `Tier ${t + 1} Rate`, tier.rate, cellMap, sheetKey, `royaltyTier_${t}_rate`, NUM_FMT.percent);
+    row++;
+  }
+
+  // Blank
+  row++;
+
+  // ════════════════════════════════════════════════════════════
   // Section: Generic Competitors
   // ════════════════════════════════════════════════════════════
   if (country.genericCompetitors.length > 0) {
