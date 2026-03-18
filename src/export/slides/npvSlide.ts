@@ -73,6 +73,15 @@ export function addNPVSlide(pptx: PptxGenJS, ctx: ExportContext): void {
     { label: 'Money at Risk', value: fmtCcy(npvOutputs.moneyAtRisk) },
   ];
 
+  // Terminal Value KPIs (appended when TV is enabled)
+  if (config.terminalValueEnabled) {
+    kpis.push(
+      { label: 'Terminal Value', value: fmtCcy(npvOutputs.terminalValue) },
+      { label: 'NPV incl. TV', value: fmtCcy(npvOutputs.npvWithTV) },
+      { label: 'rNPV incl. TV', value: fmtCcy(npvOutputs.rnpvWithTV) },
+    );
+  }
+
   const cardCount = kpis.length;
   const cardW = 1.45;
   const gap = (9.2 - cardCount * cardW) / (cardCount - 1);
@@ -104,5 +113,11 @@ export function addNPVSlide(pptx: PptxGenJS, ctx: ExportContext): void {
       align: 'center',
       shrinkText: true,
     });
+  });
+
+  // ── Footer note: mid-period discounting convention ──
+  slide.addText('Discounting convention: mid-period (cash flows assumed at mid-point of each period)', {
+    x: 0.5, y: 5.2, w: 9, h: 0.25,
+    fontSize: 7, fontFace: 'Calibri', italic: true, color: 'A0A0A0',
   });
 }

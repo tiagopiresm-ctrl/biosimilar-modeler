@@ -31,8 +31,12 @@ export function addExecutiveSummarySlide(pptx: PptxGenJS, ctx: ExportContext): v
     if (m > peakEbitMargin) peakEbitMargin = m;
   }
 
+  const tvEnabled = config.terminalValueEnabled;
   const kpis: KpiCard[] = [
-    { label: 'NPV', value: formatCurrency(npvOutputs.npv, config.currency) },
+    {
+      label: tvEnabled ? 'NPV (incl. TV)' : 'NPV',
+      value: formatCurrency(tvEnabled ? npvOutputs.npvWithTV : npvOutputs.npv, config.currency),
+    },
     { label: 'rNPV', value: formatCurrency(npvOutputs.rnpv, config.currency) },
     { label: 'IRR', value: npvOutputs.irr != null ? formatPercent(npvOutputs.irr) : 'N/A' },
     { label: 'rIRR', value: npvOutputs.rirr != null ? formatPercent(npvOutputs.rirr) : 'N/A' },

@@ -16,6 +16,7 @@ import type {
   NPVOutputs,
   DecisionTreeOutputs,
   PeriodConfig,
+  PartnerViewOutputs,
 } from '../types';
 
 import { computePeriodConfig, generatePeriodLabels, SCENARIO_LABELS } from '../types';
@@ -26,6 +27,7 @@ import {
   computeWACCOutputs,
   computeNPVOutputs,
   computeDecisionTreeOutputs,
+  computePartnerViewOutputs,
 } from '../calculations';
 
 // ---- Types ----
@@ -44,6 +46,7 @@ export interface ExportContext {
   waccOutputs: WACCOutputs;
   npvOutputs: NPVOutputs;
   dtOutputs: DecisionTreeOutputs;
+  partnerViewOutputs: PartnerViewOutputs | null;
   // Helpers
   periodLabels: string[];
   periodConfig: PeriodConfig;
@@ -90,6 +93,9 @@ export function buildExportContext(state: StoreSnapshot): ExportContext {
   // 5. Decision Tree
   const dtOutputs = computeDecisionTreeOutputs(decisionTree, npvOutputs);
 
+  // 6. Partner View
+  const partnerViewOutputs = computePartnerViewOutputs(countryOutputs, countries, config, npvOutputs);
+
   return {
     config,
     countries,
@@ -103,6 +109,7 @@ export function buildExportContext(state: StoreSnapshot): ExportContext {
     waccOutputs,
     npvOutputs,
     dtOutputs,
+    partnerViewOutputs,
     periodLabels,
     periodConfig,
     scenarioLabel: SCENARIO_LABELS[config.activeScenario],

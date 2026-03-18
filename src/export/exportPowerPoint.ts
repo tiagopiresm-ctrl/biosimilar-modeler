@@ -10,6 +10,7 @@ import { addMarketOverviewSlide } from './slides/marketOverview';
 import { addNPVSlide } from './slides/npvSlide';
 import { addWACCSlide } from './slides/waccSlide';
 import { addDecisionTreeSlide } from './slides/decisionTreeSlide';
+import { addPartnerViewSlide } from './slides/partnerViewSlide';
 
 export async function exportToPowerPoint(ctx: ExportContext): Promise<void> {
   const pptx = new PptxGenJS();
@@ -31,6 +32,7 @@ export async function exportToPowerPoint(ctx: ExportContext): Promise<void> {
   addNPVSlide(pptx, ctx);
   addWACCSlide(pptx, ctx);
   addDecisionTreeSlide(pptx, ctx);
+  addPartnerViewSlide(pptx, ctx);
 
   // Generate and save
   const data = await pptx.write({ outputType: 'arraybuffer' }) as ArrayBuffer;
