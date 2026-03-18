@@ -1221,9 +1221,14 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
           </p>
         ) : (
           <div>
+            {country.royaltyTiers.every(t => t.rate === 0) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-xs text-amber-700">
+                ⚠️ All tier rates are 0% — set rates below for royalties to apply.
+              </div>
+            )}
             <p className="text-xs text-gray-500 mb-3">
-              Royalty rate ratchets up as this country's cumulative partner net sales cross each threshold
-              ({country.localCurrency}'000).
+              When cumulative partner net sales in this country cross a threshold, the royalty rate steps up
+              to that tier's rate and <strong>never decreases</strong> ({country.localCurrency}'000).
             </p>
             <table className="w-full max-w-lg text-sm border-collapse">
               <thead>
