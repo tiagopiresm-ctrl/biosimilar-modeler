@@ -135,6 +135,8 @@ export interface ModelConfig {
   // Terminal Value (Gordon Growth Model)
   terminalValueEnabled: boolean;    // toggle TV on/off (default: false)
   terminalValueGrowthRate: number;  // perpetuity growth rate g (decimal, e.g. -0.02 = -2%)
+  // Partner View
+  partnerViewEnabled: boolean;      // toggle partner NPV on/off (default: false)
   // Version for localStorage migration
   modelVersion: number;
 }
@@ -195,6 +197,13 @@ export interface CountryAssumptions {
   // Tiered Royalties (per-country)
   royaltyTiers: RoyaltyTier[];           // tiered royalty thresholds (applied to this country's cumulative partner net sales)
   useFixedRoyaltyRate: boolean;          // if true, use flat royaltyRatePct; if false, use tiered structure
+  // Partner View costs (per-period, in local currency '000)
+  partnerPromotionalCosts: PeriodArray;     // promotional/marketing costs
+  partnerSalesForceCosts: PeriodArray;      // sales team costs
+  partnerDistributionCosts: PeriodArray;    // distribution/logistics costs
+  partnerManufacturingCosts: PeriodArray;   // additional manufacturing costs (beyond supply price)
+  partnerGAndA: PeriodArray;                // partner G&A allocation
+  partnerTaxRate: number;                   // partner's corporate tax rate (decimal)
 }
 
 // ---- WACC ----
@@ -347,6 +356,28 @@ export interface NPVOutputs {
   peakEbitValue: number;
 }
 
+// ---- PARTNER VIEW OUTPUTS ----
+export interface PartnerCountryOutputs {
+  partnerRevenue: PeriodArray;        // = biosimilar in-market sales (local ccy)
+  partnerCOGS: PeriodArray;           // = supply price paid to us (local ccy)
+  partnerGrossProfit: PeriodArray;    // revenue - COGS - milestones - royalties
+  partnerTotalCosts: PeriodArray;     // sum of all partner costs
+  partnerEBITDA: PeriodArray;         // GP - costs
+  partnerNetIncome: PeriodArray;      // EBITDA × (1-tax) if positive
+  partnerFCF: PeriodArray;            // simplified = net income (no WC/capex for partner)
+}
+
+export interface PartnerViewOutputs {
+  perCountry: PartnerCountryOutputs[];
+  totalPartnerRevenue: PeriodArray;
+  totalPartnerNetIncome: PeriodArray;
+  totalPartnerFCF: PeriodArray;
+  partnerNPV: number;
+  partnerRNPV: number;
+  companyNPVShare: number;  // our NPV / (our NPV + partner NPV)
+  partnerNPVShare: number;  // partner NPV / total
+}
+
 // ---- DECISION TREE OUTPUTS ----
 export interface DecisionTreeOutputs {
   cumulativePoS: number;
@@ -366,7 +397,8 @@ export type Page =
   | 'kpis'
   | 'decision-tree'
   | 'charts'
-  | 'library';
+  | 'library'
+  | 'partner-view';
 
 // ---- FULL MODEL STATE ----
 export interface ModelState {

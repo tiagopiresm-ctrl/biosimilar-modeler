@@ -207,7 +207,8 @@ export function createDefaultConfig(): ModelConfig {
     volumeForecastMethod: 'growth',
     terminalValueEnabled: false,
     terminalValueGrowthRate: -0.02,  // -2% decline (conservative for biosimilars)
-    modelVersion: 20,  // Must match CURRENT_MODEL_VERSION in migrate.ts
+    partnerViewEnabled: false,
+    modelVersion: 21,  // Must match CURRENT_MODEL_VERSION in migrate.ts
   };
 }
 
@@ -334,6 +335,13 @@ export function createDefaultCountry(
       { threshold: 99999999, rate: 0 },
     ],
     useFixedRoyaltyRate: true,  // default to existing flat rate behavior
+    // Partner View costs
+    partnerPromotionalCosts: createPeriodArray(0, numPeriods),
+    partnerSalesForceCosts: createPeriodArray(0, numPeriods),
+    partnerDistributionCosts: createPeriodArray(0, numPeriods),
+    partnerManufacturingCosts: createPeriodArray(0, numPeriods),
+    partnerGAndA: createPeriodArray(0, numPeriods),
+    partnerTaxRate: 0.25,
   };
 }
 

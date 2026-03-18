@@ -22,6 +22,8 @@ import type {
   NPVOutputs,
   DecisionTreeGate,
   DecisionTreeOutputs,
+  PartnerCountryOutputs,
+  PartnerViewOutputs,
 } from './types';
 
 import { computePeriodConfig, getEarliestLoeIndex } from './types';
@@ -970,6 +972,128 @@ export function computeDecisionTreeOutputs(
     cumulativePoS,
     enpv,
     enpvFromRnpv,
+  };
+}
+
+// ============================================================
+// 8. Partner View Outputs
+// ============================================================
+
+export function computePartnerViewOutputs(
+  countryOutputs: CountryOutputs[],
+  countries: CountryAssumptions[],
+  config: ModelConfig,
+  npvOutputs: NPVOutputs,
+): PartnerViewOutputs | null {
+  if (!config.partnerViewEnabled) return null;
+
+  const pc = computePeriodConfig(config);
+  const NP = pc.numPeriods;
+
+  const perCountry: PartnerCountryOutputs[] = [];
+  const totalPartnerRevenue = createPeriodArray(0, NP);
+  const totalPartnerNetIncome = createPeriodArray(0, NP);
+  const totalPartnerFCF = createPeriodArray(0, NP);
+
+  for (let c = 0; c < countryOutputs.length; c++) {
+    const co = countryOutputs[c];
+    const ca = countries[c];
+    const fxRate = ca.fxRate;
+
+    const partnerRevenue = createPeriodArray(0, NP);
+    const partnerCOGS = createPeriodArray(0, NP);
+    const partnerGrossProfit = createPeriodArray(0, NP);
+    const partnerTotalCosts = createPeriodArray(0, NP);
+    const partnerEBITDA = createPeriodArray(0, NP);
+    const partnerNetIncome = createPeriodArray(0, NP);
+    const partnerFCF = createPeriodArray(0, NP);
+
+    for (let i = 0; i < NP; i++) {
+      // Partner revenue = biosimilar in-market sales (local currency)
+      partnerRevenue[i] = safeNumber(co.biosimilarInMarketSales[i]);
+
+      // Partner COGS = supply price paid to us (grossSupplyRevenue)
+      // For Mode 2 (fixed), grossSupplyRevenue is in EUR — convert to local currency
+      if (config.apiPricingModel === 'fixed') {
+        const fx = fxRate[i] !== 0 ? fxRate[i] : 1;
+        partnerCOGS[i] = safeNumber(co.grossSupplyRevenue[i] * fx);
+      } else {
+        partnerCOGS[i] = safeNumber(co.grossSupplyRevenue[i]);
+      }
+
+      // Partner GP = revenue - COGS - milestones paid to us - royalties paid to us
+      // Milestones are in model currency — convert to local
+      const fx = fxRate[i] !== 0 ? fxRate[i] : 1;
+      const milestonesLocal = safeNumber(co.milestoneIncome[i] * fx);
+      partnerGrossProfit[i] = safeNumber(
+        partnerRevenue[i] - partnerCOGS[i] - milestonesLocal - co.royaltyIncome[i]
+      );
+
+      // Partner costs = sum of all cost lines
+      partnerTotalCosts[i] = safeNumber(
+        (ca.partnerPromotionalCosts[i] ?? 0) +
+        (ca.partnerSalesForceCosts[i] ?? 0) +
+        (ca.partnerDistributionCosts[i] ?? 0) +
+        (ca.partnerManufacturingCosts[i] ?? 0) +
+        (ca.partnerGAndA[i] ?? 0)
+      );
+
+      // Partner EBITDA = GP - costs
+      partnerEBITDA[i] = safeNumber(partnerGrossProfit[i] - partnerTotalCosts[i]);
+
+      // Partner NI = EBITDA * (1 - tax) if positive, else EBITDA (no tax benefit)
+      const taxRate = ca.partnerTaxRate ?? 0.25;
+      partnerNetIncome[i] = partnerEBITDA[i] > 0
+        ? safeNumber(partnerEBITDA[i] * (1 - taxRate))
+        : partnerEBITDA[i];
+
+      // Partner FCF = NI (simplified)
+      partnerFCF[i] = partnerNetIncome[i];
+
+      // Aggregate to totals (FX convert to model currency)
+      const fxConvert = fx !== 0 ? fx : 1;
+      totalPartnerRevenue[i] += safeDivide(partnerRevenue[i], fxConvert);
+      totalPartnerNetIncome[i] += safeDivide(partnerNetIncome[i], fxConvert);
+      totalPartnerFCF[i] += safeDivide(partnerFCF[i], fxConvert);
+    }
+
+    perCountry.push({
+      partnerRevenue,
+      partnerCOGS,
+      partnerGrossProfit,
+      partnerTotalCosts,
+      partnerEBITDA,
+      partnerNetIncome,
+      partnerFCF,
+    });
+  }
+
+  // Discount partner FCF using same discount factors from NPV outputs
+  let partnerNPV = 0;
+  let partnerRNPV = 0;
+  for (let i = 0; i < NP; i++) {
+    const discountedFCF = safeNumber(totalPartnerFCF[i] * npvOutputs.discountFactor[i]);
+    partnerNPV += discountedFCF;
+    // Risk-adjusted: use same PoS
+    const riskFactor = npvOutputs.riskAdjustedFCF[i] !== 0 && npvOutputs.fcf[i] !== 0
+      ? safeDivide(npvOutputs.riskAdjustedFCF[i], npvOutputs.fcf[i])
+      : 1;
+    partnerRNPV += safeNumber(discountedFCF * riskFactor);
+  }
+
+  const totalNPV = npvOutputs.npv + partnerNPV;
+  const companyNPVShare = totalNPV !== 0 ? safeDivide(npvOutputs.npv, totalNPV) : 0.5;
+  const partnerNPVShare = totalNPV !== 0 ? safeDivide(partnerNPV, totalNPV) : 0.5;
+
+  return {
+    perCountry,
+    totalPartnerRevenue,
+    totalPartnerNetIncome,
+    totalPartnerFCF,
+    partnerNPV,
+    partnerRNPV,
+    companyNPVShare,
+    partnerNPVShare,
   };
 }
 

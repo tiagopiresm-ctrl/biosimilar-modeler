@@ -4,7 +4,7 @@ import { SCENARIO_LABELS } from '../types';
 import {
   Settings, Table2, Globe, FileText, BarChart3, Calculator,
   TrendingUp, Target, GitBranch, PieChart, ChevronDown, ChevronRight,
-  Download, Upload, FolderOpen, HardDrive,
+  Download, Upload, FolderOpen, HardDrive, Users,
 } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { ExportButtons } from '../export/ExportButtons';
@@ -37,6 +37,7 @@ const navSections = [
       { page: 'kpis' as Page, label: 'KPIs Dashboard', icon: Target },
       { page: 'decision-tree' as Page, label: 'Decision Tree', icon: GitBranch },
       { page: 'charts' as Page, label: 'Charts', icon: PieChart },
+      { page: 'partner-view' as Page, label: 'Partner View', icon: Users },
     ],
   },
 ];
@@ -109,7 +110,9 @@ export function Sidebar() {
             <p className="px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">
               {section.label}
             </p>
-            {section.items.map(item => {
+            {section.items
+              .filter(item => item.page !== 'partner-view' || config.partnerViewEnabled)
+              .map(item => {
               const Icon = item.icon;
               const active = currentPage === item.page;
               return (

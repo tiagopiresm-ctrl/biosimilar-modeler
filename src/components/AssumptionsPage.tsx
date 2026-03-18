@@ -1270,6 +1270,96 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
           </div>
         )}
       </div>
+
+      {/* ──── Partner View Costs (only when enabled) ──── */}
+      {config.partnerViewEnabled && (
+        <PartnerCostsSection countryIndex={countryIndex} />
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Partner Costs Section (shown per country when partner view is enabled)
+// ────────────────────────────────────────────────────────────
+
+function PartnerCostsSection({ countryIndex }: { countryIndex: number }) {
+  const { countries, config, updatePartnerCost, updateCountryScalar } = useStore();
+  const country = countries[countryIndex];
+  if (!country) return null;
+
+  const pc = computePeriodConfig(config);
+  const periodLabels = generatePeriodLabels(pc);
+
+  const partnerCostFields = [
+    { field: 'partnerPromotionalCosts', label: 'Promotional Costs' },
+    { field: 'partnerSalesForceCosts', label: 'Sales Force Costs' },
+    { field: 'partnerDistributionCosts', label: 'Distribution Costs' },
+    { field: 'partnerManufacturingCosts', label: 'Manufacturing Costs' },
+    { field: 'partnerGAndA', label: 'G&A' },
+  ];
+
+  const lc = country.localCurrency ?? config.currency;
+
+  return (
+    <div className="mt-6">
+      <SectionTitle>Partner Costs ({lc}'000)</SectionTitle>
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+        <div className="mb-4">
+          <label className="block text-[11px] font-medium text-gray-500 mb-1">
+            Partner Tax Rate (%)
+          </label>
+          <input
+            type="number"
+            value={((country.partnerTaxRate ?? 0.25) * 100).toFixed(1)}
+            onChange={(e) =>
+              updateCountryScalar(countryIndex, 'partnerTaxRate', (parseFloat(e.target.value) || 0) / 100)
+            }
+            min={0}
+            max={100}
+            step={0.5}
+            className="w-24 border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                <th className="header-cell text-left sticky left-0 bg-gray-100 z-10 min-w-[180px]">Cost Line</th>
+                <th className="header-cell text-left w-16">Units</th>
+                {periodLabels.map((p, i) => (
+                  <th key={i} className="header-cell text-right min-w-[85px]">
+                    <div className="text-[10px] text-gray-400">{pc.startYear + i}</div>
+                    <div>{p}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {partnerCostFields.map(({ field, label }) => {
+                const data = ((country as unknown) as Record<string, unknown>)[field] as number[] ?? [];
+                return (
+                  <tr key={field} className="border-b border-gray-50">
+                    <td className="row-label sticky left-0 z-10 bg-white">{label}</td>
+                    <td className="px-2 py-1 text-xs text-gray-500 whitespace-nowrap">{lc}'000</td>
+                    {periodLabels.map((_, pi) => (
+                      <td key={pi} className="p-0">
+                        <EditableCell
+                          value={data[pi] ?? 0}
+                          format="currency"
+                          decimals={0}
+                          onChange={(v) => updatePartnerCost(countryIndex, field, pi, v)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

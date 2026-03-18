@@ -166,6 +166,9 @@ interface StoreActions {
     value: boolean,
   ) => void;
 
+  // Partner View costs
+  updatePartnerCost: (countryIndex: number, field: string, periodIndex: number, value: number) => void;
+
   // Import / Export
   exportJSON: () => string;
   importJSON: (json: string) => void;
@@ -521,6 +524,25 @@ export const useStore = create<ModelState & StoreActions>()(
             return { config, ...wiped };
           }
           return { config };
+        }),
+
+      // ---- Partner View Costs ----
+      updatePartnerCost: (countryIndex: number, field: string, periodIndex: number, value: number) =>
+        set((state) => {
+          const countries = [...state.countries];
+          const country = { ...countries[countryIndex] };
+          // Handle PeriodArray partner cost fields
+          const validFields = [
+            'partnerPromotionalCosts', 'partnerSalesForceCosts',
+            'partnerDistributionCosts', 'partnerManufacturingCosts', 'partnerGAndA',
+          ];
+          if (validFields.includes(field)) {
+            const arr = [...((country as Record<string, unknown>)[field] as number[])];
+            arr[periodIndex] = value;
+            (country as Record<string, unknown>)[field] = arr;
+          }
+          countries[countryIndex] = country;
+          return { countries };
         }),
 
       // ---- Export / Import ----

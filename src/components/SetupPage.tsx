@@ -258,6 +258,26 @@ export function SetupPage() {
                 : 'Full Worst / Base / Best analysis'}
             </p>
           </div>
+          {/* Partner View Toggle */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Partner View
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer mt-2">
+              <input
+                type="checkbox"
+                checked={config.partnerViewEnabled ?? false}
+                onChange={(e) => updateConfig('partnerViewEnabled', e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Enable Partner NPV Modeling</span>
+            </label>
+            <p className="text-[10px] text-gray-400 mt-1">
+              {config.partnerViewEnabled
+                ? 'Partner P&L and NPV will be computed alongside company NPV'
+                : 'Off — only company NPV is modeled'}
+            </p>
+          </div>
         </div>
 
       </div>

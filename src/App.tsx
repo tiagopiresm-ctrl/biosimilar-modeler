@@ -11,6 +11,7 @@ import { DecisionTreePage } from './components/DecisionTreePage';
 import { SummaryPage } from './components/SummaryPage';
 import { ChartsPage } from './components/ChartsPage';
 import { ProjectLibraryPage } from './components/ProjectLibraryPage';
+import { PartnerViewPage } from './components/PartnerViewPage';
 
 function AppContent() {
   const currentPage = useStore((s) => s.currentPage);
@@ -40,6 +41,8 @@ function AppContent() {
       return <SummaryPage />;
     case 'charts':
       return <ChartsPage />;
+    case 'partner-view':
+      return <PartnerViewPage />;
     case 'library':
       return <ProjectLibraryPage />;
     default:

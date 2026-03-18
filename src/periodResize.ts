@@ -99,6 +99,12 @@ export function resizeCountry(
     atcClassGrowth: resizeScenarioRow(c.atcClassGrowth, oldPc, newPc, 0.03),
     biosimilarLaunchPeriodIndex: shiftPeriodIndex(c.biosimilarLaunchPeriodIndex, oldPc, newPc),
     genericCompetitors: c.genericCompetitors.map(g => resizeGenericCompetitor(g, oldPc, newPc)),
+    // Partner View costs
+    partnerPromotionalCosts: resizePeriodArray(c.partnerPromotionalCosts ?? [], oldPc, newPc, 0),
+    partnerSalesForceCosts: resizePeriodArray(c.partnerSalesForceCosts ?? [], oldPc, newPc, 0),
+    partnerDistributionCosts: resizePeriodArray(c.partnerDistributionCosts ?? [], oldPc, newPc, 0),
+    partnerManufacturingCosts: resizePeriodArray(c.partnerManufacturingCosts ?? [], oldPc, newPc, 0),
+    partnerGAndA: resizePeriodArray(c.partnerGAndA ?? [], oldPc, newPc, 0),
   };
 }
 

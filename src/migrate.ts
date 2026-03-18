@@ -19,7 +19,7 @@ import { resizeModelState } from './periodResize';
 import { COUNTRY_CURRENCY_MAP } from './ecbFxData';
 
 /** Single source of truth for the current model version. */
-export const CURRENT_MODEL_VERSION = 20;
+export const CURRENT_MODEL_VERSION = 21;
 
 // ---- Validation ----
 
@@ -367,6 +367,26 @@ export function migrateState(persisted: unknown, fromVersion: number): ModelStat
     cfg20.terminalValueGrowthRate = cfg20.terminalValueGrowthRate ?? -0.02;
     cfg20.modelVersion = 20;
     state.config = { ...cfg20 };
+  }
+
+  // Migrate from v20 to v21: add Partner View fields
+  if (fromVersion < 21) {
+    const pc = computePeriodConfig(state.config);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg21 = state.config as any;
+    cfg21.partnerViewEnabled = cfg21.partnerViewEnabled ?? false;
+    cfg21.modelVersion = 21;
+    state.config = { ...cfg21 };
+    // Add partner cost fields to each country
+    state.countries = state.countries.map((c: CountryAssumptions) => ({
+      ...c,
+      partnerPromotionalCosts: (c as any).partnerPromotionalCosts ?? createPeriodArray(0, pc.numPeriods),
+      partnerSalesForceCosts: (c as any).partnerSalesForceCosts ?? createPeriodArray(0, pc.numPeriods),
+      partnerDistributionCosts: (c as any).partnerDistributionCosts ?? createPeriodArray(0, pc.numPeriods),
+      partnerManufacturingCosts: (c as any).partnerManufacturingCosts ?? createPeriodArray(0, pc.numPeriods),
+      partnerGAndA: (c as any).partnerGAndA ?? createPeriodArray(0, pc.numPeriods),
+      partnerTaxRate: (c as any).partnerTaxRate ?? 0.25,
+    }));
   }
 
   return state as ModelState;
