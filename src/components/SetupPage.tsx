@@ -375,6 +375,46 @@ export function SetupPage() {
             />
           </div>
 
+          {/* COGS Overhead % */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              COGS Other Expenses / Overhead (%)
+            </label>
+            <input
+              type="number"
+              value={(config.cogsOverheadPct * 100).toFixed(1)}
+              onChange={(e) =>
+                updateConfig(
+                  'cogsOverheadPct',
+                  (parseFloat(e.target.value) || 0) / 100,
+                )
+              }
+              min={0}
+              step={0.5}
+              className={inputClass}
+            />
+          </div>
+
+          {/* COGS Markup % */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              COGS Markup (%)
+            </label>
+            <input
+              type="number"
+              value={(config.cogsMarkupPct * 100).toFixed(1)}
+              onChange={(e) =>
+                updateConfig(
+                  'cogsMarkupPct',
+                  (parseFloat(e.target.value) || 0) / 100,
+                )
+              }
+              min={0}
+              step={0.5}
+              className={inputClass}
+            />
+          </div>
+
           {/* API Pricing Model */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
