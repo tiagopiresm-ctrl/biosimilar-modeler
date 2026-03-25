@@ -103,14 +103,25 @@ export function ChartsPage() {
     return entry;
   });
 
-  // ---------- Chart 5 data: Our Supply Revenue by Country (FX-converted) ----------
+  // ---------- Chart 5 data: Total Revenue by Country (supply + royalties + milestones, FX-converted) ----------
   const salesByCountryData = periodLabels.map((p, i) => {
     const entry: Record<string, string | number> = {
       period: p,
       year: years[i],
     };
     countries.forEach((c, ci) => {
-      entry[c.name] = plOutputs.netSupplyRevenueByCountry[ci]?.[i] ?? 0;
+      const co = countryOutputs[ci];
+      const fxRate = c.fxRate[i] || 1;
+      const fx = fxRate !== 0 ? fxRate : 1;
+      // Supply revenue (FX-converted)
+      const supplyRev = config.apiPricingModel === 'percentage'
+        ? co.netSupplyRevenue[i] / fx
+        : co.netSupplyRevenue[i];
+      // Royalty (FX-converted)
+      const royalty = co.royaltyIncome[i] / fx;
+      // Milestones (already in model currency)
+      const milestones = co.milestoneIncome[i];
+      entry[c.name] = supplyRev + royalty + milestones;
     });
     return entry;
   });
@@ -330,7 +341,7 @@ export function ChartsPage() {
         </ChartCard>
 
         {/* ---- Chart 5: Our Sales by Country ---- */}
-        <ChartCard title={`Our Supply Revenue by Country (${currencyUnit})`}>
+        <ChartCard title={`Total Revenue by Country (${currencyUnit})`}>
           <LineChart data={salesByCountryData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="period" tick={{ fontSize: 11 }} />
