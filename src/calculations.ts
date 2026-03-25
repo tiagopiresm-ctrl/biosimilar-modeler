@@ -923,46 +923,52 @@ export function computeNPVOutputs(
   const moneyAtRisk = Math.min(...cumulativeFCF);
   const fundingNeed = Math.min(...fcf);
 
-  // Payback undiscounted: first year FROM LAUNCH where cumulative FCF > 0
-  // We re-compute cumulative FCF from LOE to ignore pre-launch milestone cash
+  // Payback undiscounted: first year where cumulative FCF crosses from negative to positive
+  // Uses full timeline — captures pre-launch investment then recovery
   let paybackUndiscounted: number | null = null;
-  let cumFCFFromLaunch = 0;
-  for (let i = loeIdx; i < NP; i++) {
-    cumFCFFromLaunch += fcf[i];
-    if (cumFCFFromLaunch > 0) {
+  let seenNegativeCum = false;
+  for (let i = 0; i < NP; i++) {
+    if (cumulativeFCF[i] < 0) seenNegativeCum = true;
+    if (seenNegativeCum && cumulativeFCF[i] > 0) {
       paybackUndiscounted = pc.startYear + i;
       break;
     }
   }
 
-  // Payback discounted: first year FROM LAUNCH where cumulative discounted FCF > 0
+  // Payback discounted: same logic on cumulative discounted FCF
   let paybackDiscounted: number | null = null;
-  let cumDFCFFromLaunch = 0;
-  for (let i = loeIdx; i < NP; i++) {
-    cumDFCFFromLaunch += discountedFCF[i];
-    if (cumDFCFFromLaunch > 0) {
+  let seenNegativeDiscCum = false;
+  for (let i = 0; i < NP; i++) {
+    if (cumulativeDiscountedFCF[i] < 0) seenNegativeDiscCum = true;
+    if (seenNegativeDiscCum && cumulativeDiscountedFCF[i] > 0) {
       paybackDiscounted = pc.startYear + i;
       break;
     }
   }
 
-  // Break-even year: first year FROM LAUNCH where product FCF (excl milestones pre-launch) > 0
+  // Break-even year: first year where annual FCF turns positive AFTER a negative year
   let breakEvenYear: number | null = null;
-  for (let i = loeIdx; i < NP; i++) {
-    if (fcf[i] > 0) {
+  let seenNegativeFCF = false;
+  for (let i = 0; i < NP; i++) {
+    if (fcf[i] < 0) seenNegativeFCF = true;
+    if (seenNegativeFCF && fcf[i] > 0) {
       breakEvenYear = pc.startYear + i;
       break;
     }
   }
 
-  // Breakeven from launch: years from earliest LOE to payback
-  const loeCalendarYear = pc.startYear + loeIdx;
+  // Breakeven from launch: years from EARLIEST BIOSIMILAR LAUNCH (not LOE) to payback
+  // Use the earliest biosimilarLaunchPeriodIndex across all countries
+  const earliestLaunchIdx = countries.length > 0
+    ? Math.min(...countries.map(c => (c as any).biosimilarLaunchPeriodIndex ?? loeIdx))
+    : loeIdx;
+  const launchCalendarYear = pc.startYear + earliestLaunchIdx;
   const breakEvenFromLaunchYears: number | null =
-    paybackUndiscounted !== null ? paybackUndiscounted - loeCalendarYear : null;
+    paybackUndiscounted !== null ? paybackUndiscounted - launchCalendarYear : null;
 
-  // Discounted payback from launch: years from earliest LOE to discounted payback
+  // Discounted payback from launch: years from biosimilar launch to discounted payback
   const discountedPaybackYears: number | null =
-    paybackDiscounted !== null ? paybackDiscounted - loeCalendarYear : null;
+    paybackDiscounted !== null ? paybackDiscounted - launchCalendarYear : null;
 
   let peakEbitValue = -Infinity;
   let peakEbitYear: number | null = null;
