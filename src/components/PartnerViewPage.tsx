@@ -270,7 +270,7 @@ export function PartnerViewPage() {
         `${ccy}'000`,
         [
           {
-            label: 'Partner Revenue (Biosimilar In-Market Sales)',
+            label: 'Partner Net Sales (Revenue Net of GTN)',
             data: partnerOutputs.totalPartnerRevenue,
             decimals: 0,
             isBold: true,
@@ -302,7 +302,7 @@ export function PartnerViewPage() {
           `Partner P&L: ${country.name} (${lc}'000)`,
           `${lc}'000`,
           [
-            { label: 'Revenue (In-Market Sales)', data: pco.partnerRevenue, decimals: 0 },
+            { label: 'Partner Net Sales (Revenue Net of GTN)', data: pco.partnerRevenue, decimals: 0 },
             { label: 'COGS (Supply Price to Us)', data: pco.partnerCOGS, decimals: 0 },
             { label: 'Gross Profit', data: pco.partnerGrossProfit, decimals: 0, isBold: true, highlight: true },
             { label: 'Total Costs', data: pco.partnerTotalCosts, decimals: 0 },

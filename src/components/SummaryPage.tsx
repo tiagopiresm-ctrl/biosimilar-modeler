@@ -137,7 +137,7 @@ export function SummaryPage() {
         [
           ...countries.map((c, i) => ({
             label: c.name,
-            data: countryOutputs[i].netSupplyRevenue,
+            data: plOutputs.netSupplyRevenueByCountry[i] || new Array(pc.numPeriods).fill(0),
             decimals: 0,
           })),
           {

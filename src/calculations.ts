@@ -331,7 +331,7 @@ export function computeCountryOutputs(
       const netSalesPerGram = safeDivide(partnerNetSales[i], gramsFromSalesVolume);
       // Step 3: Supply price per gram = net sales per gram × supply price %
       apiPricePerGram[i] = safeNumber(netSalesPerGram * supplyPricePctArr[i]);
-      // Gross Supply Revenue = price per gram × total grams supplied (incl. overage)
+      // Gross Supply Revenue = price per gram × total grams supplied
       grossSupplyRevenue[i] = safeNumber(apiGramsSupplied[i] * apiPricePerGram[i]);
       // Back-calculate supply price per unit for display
       supplyPrice[i] = safeDivide(grossSupplyRevenue[i], biosimilarVolume[i]);
@@ -638,7 +638,7 @@ export function computePLOutputs(
 
   for (let i = 0; i < NP; i++) {
     // Compute WC change from days
-    const rev = totalNetSupplyRevenue[i];
+    const rev = totalRevenue[i];
     const absCogs = Math.abs(cogs[i]);
 
     if (i === 0) {
@@ -648,7 +648,7 @@ export function computePLOutputs(
       );
     } else {
       // Year 1+: delta-based
-      const prevRev = totalNetSupplyRevenue[i - 1];
+      const prevRev = totalRevenue[i - 1];
       const prevAbsCogs = Math.abs(cogs[i - 1]);
       const deltaRev = rev - prevRev;
       const deltaCogs = absCogs - prevAbsCogs;

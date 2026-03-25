@@ -50,6 +50,7 @@ export function PLPage() {
       title: 'COST OF GOODS SOLD',
       rows: [
         { label: 'COGS', unit: `${config.currency}'000`, data: plOutputs.cogs, decimals: 0, highlight: true },
+        { label: 'Other Income', unit: `${config.currency}'000`, data: plOutputs.otherIncome, decimals: 0 },
         { label: 'Gross Profit', unit: `${config.currency}'000`, data: plOutputs.grossProfit, decimals: 0, isBold: true, highlight: true },
         { label: 'Gross Margin', unit: '%', data: plOutputs.grossMargin, format: 'percent', decimals: 1 },
       ],
@@ -87,9 +88,12 @@ export function PLPage() {
     {
       title: 'NET INCOME',
       rows: [
+        { label: 'Financial Costs', unit: `${config.currency}'000`, data: plOutputs.financialCosts, decimals: 0 },
+        { label: 'EBT', unit: `${config.currency}'000`, data: plOutputs.ebt, decimals: 0, isBold: true, highlight: true },
         { label: 'Income Tax', unit: `${config.currency}'000`, data: plOutputs.incomeTax, decimals: 0 },
         { label: 'Net Income', unit: `${config.currency}'000`, data: plOutputs.netIncome, decimals: 0, isBold: true, highlight: true },
         { label: 'Net Income Margin', unit: '%', data: plOutputs.netIncomeMargin, format: 'percent', decimals: 1 },
+        { label: 'Cumulative Net Income', unit: `${config.currency}'000`, data: plOutputs.cumulativeNetIncome, decimals: 0, highlight: true },
       ],
     },
     {
