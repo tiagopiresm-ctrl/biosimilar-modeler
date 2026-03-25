@@ -106,12 +106,14 @@ export function addInteractivePLSheet(
   writeSection(ws, row, 'Cost of Goods Sold', colCount);
   row++;
 
+  const cogsInputMethodRef = cellMap.getScalar('config', 'cogsInputMethod').toFormula();
   const apiCostRef = cellMap.getScalar('config', 'apiCostPerGram').toFormula();
+  const apiCostPerUnitRef = cellMap.getScalar('config', 'apiCostPerUnit').toFormula();
   const cogsInflRef = cellMap.getScalar('config', 'cogsInflation').toFormula();
   const cogsOverheadRef = cellMap.getScalar('config', 'cogsOverhead').toFormula();
   const cogsMarkupRef = cellMap.getScalar('config', 'cogsMarkup').toFormula();
 
-  // #2: COGS now includes overhead % and markup %
+  // #2: COGS now includes overhead % and markup %, supports per-gram and per-unit methods
   writeFormulaRow(ws, row, 'COGS', NP, (p) => {
     if (p < earliestLoeIdx) return '0';
     const yearsFromLOE = p - earliestLoeIdx;
@@ -119,7 +121,14 @@ export function addInteractivePLSheet(
       cellMap.get(`countryModel_${ci}`, 'apiGramsSupplied', p).toFormula(),
     );
     const gramsSum = gramsRefs.length === 1 ? gramsRefs[0] : `(${gramsRefs.join('+')})`;
-    return `-(${apiCostRef}*POWER(1+${cogsInflRef},${yearsFromLOE})*(1+${cogsOverheadRef})*(1+${cogsMarkupRef})*${gramsSum})`;
+    const unitsRefs = countries.map((_, ci) =>
+      cellMap.get(`countryModel_${ci}`, 'biosimilarVolume', p).toFormula(),
+    );
+    const unitsSum = unitsRefs.length === 1 ? unitsRefs[0] : `(${unitsRefs.join('+')})`;
+    const inflFactor = `POWER(1+${cogsInflRef},${yearsFromLOE})`;
+    const overheadMarkup = `(1+${cogsOverheadRef})*(1+${cogsMarkupRef})`;
+    // IF(method="perUnit", -costPerUnit*infl*OH*MU*units, -costPerGram*infl*OH*MU*grams)
+    return `IF(${cogsInputMethodRef}="perUnit",-(${apiCostPerUnitRef}*${inflFactor}*${overheadMarkup}*${unitsSum}),-(${apiCostRef}*${inflFactor}*${overheadMarkup}*${gramsSum}))`;
   }, plOutputs.cogs, cellMap, sheetKey, 'cogs', NUM_FMT.integer);
   row++;
 

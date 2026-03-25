@@ -197,8 +197,10 @@ export function createDefaultConfig(): ModelConfig {
     useGlobalCountry: false,
     unitsPerGramOfAPI: 25,       // 25 finished units per gram of API (equiv. ~40mg per unit)
     manufacturingOverage: 0,     // deprecated — no longer used in calculations
+    cogsInputMethod: 'perGram',     // default to existing behavior (cost per gram of API)
     apiPricingModel: 'percentage',
     apiCostPerGram: 5,              // €5 per gram of API (matches seed data price levels)
+    apiCostPerUnit: 48,             // €48 per finished unit (reasonable biosimilar default)
     cogsInflationRate: 0.025,       // 2.5% annual COGS inflation
     cogsOverheadPct: 0.15,          // 15% other expenses / overhead
     cogsMarkupPct: 0,               // 0% internal markup (set to 0.40 for 40%)
@@ -209,7 +211,7 @@ export function createDefaultConfig(): ModelConfig {
     terminalValueEnabled: false,
     terminalValueGrowthRate: -0.02,  // -2% decline (conservative for biosimilars)
     partnerViewEnabled: false,
-    modelVersion: 23,  // Must match CURRENT_MODEL_VERSION in migrate.ts
+    modelVersion: 24,  // Must match CURRENT_MODEL_VERSION in migrate.ts
   };
 }
 

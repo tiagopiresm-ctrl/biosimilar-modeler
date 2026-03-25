@@ -8,10 +8,12 @@ import {
   API_PRICING_MODEL_LABELS,
   VOLUME_FORECAST_METHOD_LABELS,
   SCENARIO_MODE_LABELS,
+  COGS_INPUT_METHOD_LABELS,
   type VolumeMultiplier,
   type ApiPricingModel,
   type VolumeForecastMethod,
   type ScenarioMode,
+  type CogsInputMethod,
 } from '../types';
 import { Download, Upload, Plus, Trash2, Beaker } from 'lucide-react';
 
@@ -317,45 +319,94 @@ export function SetupPage() {
           </p>
         </div>
 
+        {/* COGS Input Method Toggle */}
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-gray-600 mb-2">
+            COGS Input Method
+          </label>
+          <div className="flex gap-4">
+            {(Object.entries(COGS_INPUT_METHOD_LABELS) as [CogsInputMethod, string][]).map(
+              ([key, label]) => (
+                <label key={key} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="cogsInputMethod"
+                    value={key}
+                    checked={(config.cogsInputMethod ?? 'perGram') === key}
+                    onChange={() => updateConfig('cogsInputMethod', key)}
+                    className="accent-purple-600"
+                  />
+                  {label}
+                </label>
+              ),
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-2xl">
-          {/* Units per Gram of API */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Standard Units per Gram of API
-            </label>
-            <input
-              type="number"
-              value={config.unitsPerGramOfAPI}
-              onChange={(e) =>
-                updateConfig('unitsPerGramOfAPI', parseFloat(e.target.value) || 1)
-              }
-              min={0.01}
-              step={0.01}
-              className={inputClass}
-            />
-            <p className="text-[10px] text-gray-400 mt-1">
-              How many finished standard units (tablets/vials) 1 gram of API produces
-            </p>
-          </div>
+          {/* Per-Gram fields: Units per Gram + API Cost per Gram */}
+          {(config.cogsInputMethod ?? 'perGram') === 'perGram' && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Standard Units per Gram of API
+                </label>
+                <input
+                  type="number"
+                  value={config.unitsPerGramOfAPI}
+                  onChange={(e) =>
+                    updateConfig('unitsPerGramOfAPI', parseFloat(e.target.value) || 1)
+                  }
+                  min={0.01}
+                  step={0.01}
+                  className={inputClass}
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  How many finished standard units (tablets/vials) 1 gram of API produces
+                </p>
+              </div>
 
-          {/* API Cost per Gram */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              API Cost per Gram ({config.currency})
-            </label>
-            <input
-              type="number"
-              value={config.apiCostPerGram}
-              onChange={(e) =>
-                updateConfig('apiCostPerGram', parseFloat(e.target.value) || 0)
-              }
-              min={0}
-              step={1}
-              className={inputClass}
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  API Cost per Gram ({config.currency})
+                </label>
+                <input
+                  type="number"
+                  value={config.apiCostPerGram}
+                  onChange={(e) =>
+                    updateConfig('apiCostPerGram', parseFloat(e.target.value) || 0)
+                  }
+                  min={0}
+                  step={1}
+                  className={inputClass}
+                />
+              </div>
+            </>
+          )}
 
-          {/* COGS Inflation Rate */}
+          {/* Per-Unit field: API Cost per Unit */}
+          {(config.cogsInputMethod ?? 'perGram') === 'perUnit' && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                API Cost per Finished Unit ({config.currency})
+              </label>
+              <input
+                type="number"
+                value={config.apiCostPerUnit ?? 48}
+                onChange={(e) =>
+                  updateConfig('apiCostPerUnit', parseFloat(e.target.value) || 0)
+                }
+                min={0}
+                step={1}
+                className={inputClass}
+              />
+              <p className="text-[10px] text-gray-400 mt-1">
+                Total manufacturing cost per finished unit (tablet/vial)
+              </p>
+            </div>
+          )}
+
+          {/* COGS Inflation Rate — always shown */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
               COGS Inflation Rate (%)
@@ -375,7 +426,7 @@ export function SetupPage() {
             />
           </div>
 
-          {/* COGS Overhead % */}
+          {/* COGS Overhead % — always shown */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
               COGS Other Expenses / Overhead (%)
@@ -395,7 +446,7 @@ export function SetupPage() {
             />
           </div>
 
-          {/* COGS Markup % */}
+          {/* COGS Markup % — always shown */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
               COGS Markup (%)

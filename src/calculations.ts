@@ -484,9 +484,11 @@ export function computePLOutputs(
     );
   }
 
-  // ---- COGS (Volume-driven: cost/gram × inflation × overhead × markup × total API grams) ----
+  // ---- COGS (Volume-driven: supports both per-gram and per-unit input methods) ----
   // #2: Added overhead % and markup % to COGS calculation (matches company Excel COPs structure)
+  const cogsInputMethod = config.cogsInputMethod ?? 'perGram';
   const apiCostPerGram = config.apiCostPerGram;
+  const apiCostPerUnit = config.apiCostPerUnit ?? 48;
   const cogsInflation = config.cogsInflationRate;
   const cogsOverhead = config.cogsOverheadPct ?? 0;
   const cogsMarkup = config.cogsMarkupPct ?? 0;
@@ -495,17 +497,31 @@ export function computePLOutputs(
 
   for (let i = 0; i < NP; i++) {
     if (i >= earliestLoeIdx) {
-      let totalGrams = 0;
-      for (let c = 0; c < countryOutputs.length; c++) {
-        totalGrams += countryOutputs[c].apiGramsSupplied[i];
-      }
       const yearsFromLOE = i - earliestLoeIdx;
-      // Base cost × inflation → Real COGs → ×(1+overhead) → ×(1+markup) → Final COGs
-      const costPerGramAtT = apiCostPerGram
-        * Math.pow(1 + cogsInflation, yearsFromLOE)
-        * (1 + cogsOverhead)
-        * (1 + cogsMarkup);
-      cogs[i] = safeNumber(-(costPerGramAtT * totalGrams));
+
+      if (cogsInputMethod === 'perUnit') {
+        // Per-unit method: costPerUnit × inflation × overhead × markup × totalUnits
+        let totalUnits = 0;
+        for (let c = 0; c < countryOutputs.length; c++) {
+          totalUnits += countryOutputs[c].biosimilarVolume[i];
+        }
+        const costPerUnitAtT = apiCostPerUnit
+          * Math.pow(1 + cogsInflation, yearsFromLOE)
+          * (1 + cogsOverhead)
+          * (1 + cogsMarkup);
+        cogs[i] = safeNumber(-(costPerUnitAtT * totalUnits));
+      } else {
+        // Per-gram method (existing): costPerGram × inflation × overhead × markup × totalGrams
+        let totalGrams = 0;
+        for (let c = 0; c < countryOutputs.length; c++) {
+          totalGrams += countryOutputs[c].apiGramsSupplied[i];
+        }
+        const costPerGramAtT = apiCostPerGram
+          * Math.pow(1 + cogsInflation, yearsFromLOE)
+          * (1 + cogsOverhead)
+          * (1 + cogsMarkup);
+        cogs[i] = safeNumber(-(costPerGramAtT * totalGrams));
+      }
     }
   }
 

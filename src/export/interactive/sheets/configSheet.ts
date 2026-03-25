@@ -120,49 +120,57 @@ export function addInteractiveConfigSheet(
   writeKV(16, 'API Pricing Model', config.apiPricingModel);
   cellMap.registerScalar('config', 'apiPricingModel', 'Config', 'B16');
 
-  // Row 17: Units per Gram of API
-  writeKV(17, 'Units per Gram of API', config.unitsPerGramOfAPI, NUM_FMT.decimal2);
-  cellMap.registerScalar('config', 'unitsPerGram', 'Config', 'B17');
+  // Row 17: COGS Input Method
+  writeKV(17, 'COGS Input Method', config.cogsInputMethod ?? 'perGram');
+  cellMap.registerScalar('config', 'cogsInputMethod', 'Config', 'B17');
 
-  // Row 18: Manufacturing Overage %
-  writeKV(18, 'Manufacturing Overage %', config.manufacturingOverage, NUM_FMT.percent);
-  cellMap.registerScalar('config', 'manufacturingOverage', 'Config', 'B18');
+  // Row 18: Units per Gram of API
+  writeKV(18, 'Units per Gram of API', config.unitsPerGramOfAPI, NUM_FMT.decimal2);
+  cellMap.registerScalar('config', 'unitsPerGram', 'Config', 'B18');
 
-  // Row 19: API Cost per Gram
-  writeKV(19, 'API Cost per Gram', config.apiCostPerGram, NUM_FMT.decimal2);
-  cellMap.registerScalar('config', 'apiCostPerGram', 'Config', 'B19');
+  // Row 19: Manufacturing Overage %
+  writeKV(19, 'Manufacturing Overage %', config.manufacturingOverage, NUM_FMT.percent);
+  cellMap.registerScalar('config', 'manufacturingOverage', 'Config', 'B19');
 
-  // Row 20: COGS Inflation Rate %
-  writeKV(20, 'COGS Inflation Rate %', config.cogsInflationRate, NUM_FMT.percent);
-  cellMap.registerScalar('config', 'cogsInflation', 'Config', 'B20');
+  // Row 20: API Cost per Gram
+  writeKV(20, 'API Cost per Gram', config.apiCostPerGram, NUM_FMT.decimal2);
+  cellMap.registerScalar('config', 'apiCostPerGram', 'Config', 'B20');
 
-  // Row 21: COGS Overhead %
-  writeKV(21, 'COGS Overhead %', config.cogsOverheadPct ?? 0.15, NUM_FMT.percent);
-  cellMap.registerScalar('config', 'cogsOverhead', 'Config', 'B21');
+  // Row 21: API Cost per Unit
+  writeKV(21, 'API Cost per Unit', config.apiCostPerUnit ?? 48, NUM_FMT.decimal2);
+  cellMap.registerScalar('config', 'apiCostPerUnit', 'Config', 'B21');
 
-  // Row 22: COGS Markup %
-  writeKV(22, 'COGS Markup %', config.cogsMarkupPct ?? 0, NUM_FMT.percent);
-  cellMap.registerScalar('config', 'cogsMarkup', 'Config', 'B22');
+  // Row 22: COGS Inflation Rate %
+  writeKV(22, 'COGS Inflation Rate %', config.cogsInflationRate, NUM_FMT.percent);
+  cellMap.registerScalar('config', 'cogsInflation', 'Config', 'B22');
 
-  // Row 23: blank
+  // Row 23: COGS Overhead %
+  writeKV(23, 'COGS Overhead %', config.cogsOverheadPct ?? 0.15, NUM_FMT.percent);
+  cellMap.registerScalar('config', 'cogsOverhead', 'Config', 'B23');
 
-  // ── Row 24: Volume Forecast ──
-  section(24, 'Volume Forecast');
+  // Row 24: COGS Markup %
+  writeKV(24, 'COGS Markup %', config.cogsMarkupPct ?? 0, NUM_FMT.percent);
+  cellMap.registerScalar('config', 'cogsMarkup', 'Config', 'B24');
 
-  // Row 25: Forecast Method
-  writeKV(25, 'Forecast Method', config.volumeForecastMethod);
+  // Row 25: blank
 
-  // Row 26: Volume Multiplier
-  writeKV(26, 'Volume Multiplier', config.volumeMultiplier);
+  // ── Row 26: Volume Forecast ──
+  section(26, 'Volume Forecast');
 
-  // Row 27: blank
+  // Row 27: Forecast Method
+  writeKV(27, 'Forecast Method', config.volumeForecastMethod);
 
-  // ── Row 28: Countries ──
-  section(28, 'Countries');
+  // Row 28: Volume Multiplier
+  writeKV(28, 'Volume Multiplier', config.volumeMultiplier);
 
-  // Rows 29+: Country list
+  // Row 29: blank
+
+  // ── Row 30: Countries ──
+  section(30, 'Countries');
+
+  // Rows 31+: Country list
   for (let i = 0; i < countries.length; i++) {
-    const row = 29 + i;
+    const row = 31 + i;
     const lbl = ws.getCell(row, 1);
     lbl.value = countries[i].name;
     lbl.font = LABEL_FONT;

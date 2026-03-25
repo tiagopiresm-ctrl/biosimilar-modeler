@@ -6,7 +6,7 @@ import {
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT,
   LABEL_FONT, VALUE_FONT, THIN_BORDER, NUM_FMT,
 } from '../excelStyles';
-import { VOLUME_MULTIPLIER_LABELS, API_PRICING_MODEL_LABELS, VOLUME_FORECAST_METHOD_LABELS, SCENARIO_MODE_LABELS } from '../../types';
+import { VOLUME_MULTIPLIER_LABELS, API_PRICING_MODEL_LABELS, VOLUME_FORECAST_METHOD_LABELS, SCENARIO_MODE_LABELS, COGS_INPUT_METHOD_LABELS } from '../../types';
 import { formatPercent } from '../../calculations';
 
 export function addConfigSheet(wb: Workbook, ctx: ExportContext): void {
@@ -76,10 +76,14 @@ export function addConfigSheet(wb: Workbook, ctx: ExportContext): void {
 
   const apiRows: [string, string | number][] = [
     ['API Pricing Model', API_PRICING_MODEL_LABELS[config.apiPricingModel]],
+    ['COGS Input Method', COGS_INPUT_METHOD_LABELS[config.cogsInputMethod ?? 'perGram']],
     ['Units per Gram of API', config.unitsPerGramOfAPI],
     ['Manufacturing Overage', formatPercent(config.manufacturingOverage)],
     ['API Cost per Gram', `${config.currency} ${config.apiCostPerGram}`],
+    ['API Cost per Unit', `${config.currency} ${config.apiCostPerUnit ?? 48}`],
     ['COGS Inflation Rate', formatPercent(config.cogsInflationRate)],
+    ['COGS Overhead', formatPercent(config.cogsOverheadPct ?? 0)],
+    ['COGS Markup', formatPercent(config.cogsMarkupPct ?? 0)],
   ];
 
   for (const [label, value] of apiRows) {

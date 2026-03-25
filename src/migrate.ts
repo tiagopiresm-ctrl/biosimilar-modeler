@@ -19,7 +19,7 @@ import { resizeModelState } from './periodResize';
 import { COUNTRY_CURRENCY_MAP } from './ecbFxData';
 
 /** Single source of truth for the current model version. */
-export const CURRENT_MODEL_VERSION = 23;
+export const CURRENT_MODEL_VERSION = 24;
 
 // ---- Validation ----
 
@@ -432,6 +432,16 @@ export function migrateState(persisted: unknown, fromVersion: number): ModelStat
     fb.capitalExpenditure = fb.capitalExpenditure ?? createPeriodArray(0, computePeriodConfig(state.config).numPeriods);
     state.fcfBridge = { ...fb };
     state.config = { ...state.config, modelVersion: 23 };
+  }
+
+  // Migrate from v23 to v24: add cogsInputMethod and apiCostPerUnit
+  if (fromVersion < 24) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg24 = state.config as any;
+    cfg24.cogsInputMethod = cfg24.cogsInputMethod ?? 'perGram';
+    cfg24.apiCostPerUnit = cfg24.apiCostPerUnit ?? 48;
+    cfg24.modelVersion = 24;
+    state.config = { ...cfg24 };
   }
 
   return state as ModelState;

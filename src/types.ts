@@ -104,6 +104,14 @@ export const API_PRICING_MODEL_LABELS: Record<ApiPricingModel, string> = {
   fixed: 'Fixed Price per Gram',
 };
 
+// ---- COGS INPUT METHOD ----
+export type CogsInputMethod = 'perGram' | 'perUnit';
+
+export const COGS_INPUT_METHOD_LABELS: Record<CogsInputMethod, string> = {
+  perGram: 'Per Gram of API',
+  perUnit: 'Per Finished Unit',
+};
+
 // ---- ROYALTY TIERS ----
 export interface RoyaltyTier {
   threshold: number;  // '000 EUR cumulative sales threshold
@@ -125,7 +133,9 @@ export interface ModelConfig {
   /** @deprecated No longer used in calculations — kept for export compatibility */
   manufacturingOverage: number;    // % overage (decimal) — deprecated, always 0
   apiPricingModel: ApiPricingModel; // 'percentage' or 'fixed'
+  cogsInputMethod: CogsInputMethod; // how COGS is entered: 'perGram' or 'perUnit'
   apiCostPerGram: number;          // cost per gram of API (model currency, e.g. €180)
+  apiCostPerUnit: number;          // cost per finished unit (model currency), used when cogsInputMethod='perUnit'
   cogsInflationRate: number;       // annual COGS inflation rate (decimal, e.g. 0.025 = 2.5%)
   cogsOverheadPct: number;         // COGS other expenses / overhead % (decimal, e.g. 0.15 = 15%)
   cogsMarkupPct: number;           // COGS internal markup % (decimal, e.g. 0.40 = 40%)
