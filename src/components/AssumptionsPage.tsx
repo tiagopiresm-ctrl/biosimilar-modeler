@@ -496,7 +496,7 @@ const COUNTRY_FIELDS_MARKET: Array<{
   format: 'percent' | 'number' | 'currency';
   decimals: number;
 }> = [
-  { key: 'originatorPriceGrowth', label: 'Originator Price Growth (%)', format: 'percent', decimals: 1 },
+  { key: 'originatorPriceGrowth', label: 'Originator Price Growth (%)', format: 'percent', decimals: 2 },
 ];
 
 const COUNTRY_FIELDS_BIOSIMILAR: Array<{
@@ -505,9 +505,9 @@ const COUNTRY_FIELDS_BIOSIMILAR: Array<{
   format: 'percent' | 'number' | 'currency';
   decimals: number;
 }> = [
-  { key: 'biosimilarPricePct', label: 'Biosimilar In-Market Price (% of Originator)', format: 'percent', decimals: 1 },
-  { key: 'biosimilarPenetration', label: 'Total Biosimilar Penetration (% of Molecule Market)', format: 'percent', decimals: 1 },
-  { key: 'ourShareOfBiosimilar', label: 'Our Share of Biosimilar Segment (%)', format: 'percent', decimals: 1 },
+  { key: 'biosimilarPricePct', label: 'Biosimilar In-Market Price (% of Originator)', format: 'percent', decimals: 2 },
+  { key: 'biosimilarPenetration', label: 'Total Biosimilar Penetration (% of Molecule Market)', format: 'percent', decimals: 2 },
+  { key: 'ourShareOfBiosimilar', label: 'Our Share of Biosimilar Segment (%)', format: 'percent', decimals: 2 },
 ];
 
 const COUNTRY_FIELDS_PARTNER: Array<{
@@ -516,7 +516,7 @@ const COUNTRY_FIELDS_PARTNER: Array<{
   format: 'percent' | 'number' | 'currency';
   decimals: number;
 }> = [
-  { key: 'partnerGtnPct', label: 'Partner Gross-to-Net (%)', format: 'percent', decimals: 1 },
+  { key: 'partnerGtnPct', label: 'Partner Gross-to-Net (%)', format: 'percent', decimals: 2 },
 ];
 
 // These fields are shown after the conditional supply pricing grid
@@ -526,7 +526,7 @@ const COUNTRY_SCENARIO_FIELDS_ECONOMICS: Array<{
   format: 'percent' | 'number' | 'currency';
   decimals: number;
 }> = [
-  { key: 'royaltyRatePct', label: 'Royalty Rate (% of Partner Net Sales)', format: 'percent', decimals: 1 },
+  { key: 'royaltyRatePct', label: 'Royalty Rate (% of Partner Net Sales)', format: 'percent', decimals: 2 },
 ];
 
 function CountryTab({ countryIndex }: { countryIndex: number }) {
@@ -811,7 +811,7 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
                 activeScenario={config.activeScenario}
             scenarioMode={config.scenarioMode}
                 format="percent"
-                decimals={1}
+                decimals={2}
                 headers={headers}
                 onCellChange={(sk, pi, v) =>
                   updateCountryAssumption(countryIndex, 'volumeAdjustment', sk, pi, v)
@@ -1015,7 +1015,7 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
           activeScenario={config.activeScenario}
           scenarioMode={config.scenarioMode}
           format="percent"
-          decimals={1}
+          decimals={2}
           headers={headers}
           onCellChange={(sk, pi, v) =>
             updateCountryAssumption(countryIndex, 'supplyPricePct', sk, pi, v)
