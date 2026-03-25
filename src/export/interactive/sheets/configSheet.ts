@@ -165,12 +165,38 @@ export function addInteractiveConfigSheet(
 
   // Row 29: blank
 
-  // ── Row 30: Countries ──
-  section(30, 'Countries');
+  // ── Row 30: Terminal Value ──
+  section(30, 'Terminal Value');
 
-  // Rows 31+: Country list
+  // Row 31: Terminal Value Enabled (1=Yes, 0=No)
+  writeKV(31, 'Terminal Value Enabled (1=Yes, 0=No)', config.terminalValueEnabled ? 1 : 0, NUM_FMT.integer);
+  cellMap.registerScalar('config', 'terminalValueEnabled', 'Config', 'B31');
+
+  // Row 32: Terminal Value Growth Rate
+  writeKV(32, 'Terminal Value Growth Rate', config.terminalValueGrowthRate, NUM_FMT.percent);
+  cellMap.registerScalar('config', 'terminalValueGrowthRate', 'Config', 'B32');
+
+  // Row 33: blank
+
+  // ── Row 34: Partner & Global ──
+  section(34, 'Partner & Global');
+
+  // Row 35: Partner View Enabled (1=Yes, 0=No)
+  writeKV(35, 'Partner View Enabled (1=Yes, 0=No)', config.partnerViewEnabled ? 1 : 0, NUM_FMT.integer);
+  cellMap.registerScalar('config', 'partnerViewEnabled', 'Config', 'B35');
+
+  // Row 36: Use Global Country (1=Yes, 0=No)
+  writeKV(36, 'Use Global Country (1=Yes, 0=No)', config.useGlobalCountry ? 1 : 0, NUM_FMT.integer);
+  cellMap.registerScalar('config', 'useGlobalCountry', 'Config', 'B36');
+
+  // Row 37: blank
+
+  // ── Row 38: Countries ──
+  section(38, 'Countries');
+
+  // Rows 39+: Country list
   for (let i = 0; i < countries.length; i++) {
-    const row = 31 + i;
+    const row = 39 + i;
     const lbl = ws.getCell(row, 1);
     lbl.value = countries[i].name;
     lbl.font = LABEL_FONT;

@@ -185,12 +185,60 @@ export function addInteractivePLSheet(
   }, plOutputs.rAndD, cellMap, sheetKey, 'rAndD', NUM_FMT.integer);
   row++;
 
-  // Total OpEx
+  // Operations
+  writeFormulaRow(ws, row, 'Operations', NP, (p) => {
+    const ref = cellMap.get('plAssumptions', 'operations_active', p).toFormula();
+    return `-ABS(${ref})`;
+  }, plOutputs.operations, cellMap, sheetKey, 'operations', NUM_FMT.integer);
+  row++;
+
+  // Quality
+  writeFormulaRow(ws, row, 'Quality', NP, (p) => {
+    const ref = cellMap.get('plAssumptions', 'quality_active', p).toFormula();
+    return `-ABS(${ref})`;
+  }, plOutputs.quality, cellMap, sheetKey, 'quality', NUM_FMT.integer);
+  row++;
+
+  // Clinical
+  writeFormulaRow(ws, row, 'Clinical', NP, (p) => {
+    const ref = cellMap.get('plAssumptions', 'clinical_active', p).toFormula();
+    return `-ABS(${ref})`;
+  }, plOutputs.clinical, cellMap, sheetKey, 'clinical', NUM_FMT.integer);
+  row++;
+
+  // Regulatory
+  writeFormulaRow(ws, row, 'Regulatory', NP, (p) => {
+    const ref = cellMap.get('plAssumptions', 'regulatory_active', p).toFormula();
+    return `-ABS(${ref})`;
+  }, plOutputs.regulatory, cellMap, sheetKey, 'regulatory', NUM_FMT.integer);
+  row++;
+
+  // Pharmacovigilance
+  writeFormulaRow(ws, row, 'Pharmacovigilance', NP, (p) => {
+    const ref = cellMap.get('plAssumptions', 'pharmacovigilance_active', p).toFormula();
+    return `-ABS(${ref})`;
+  }, plOutputs.pharmacovigilance, cellMap, sheetKey, 'pharmacovigilance', NUM_FMT.integer);
+  row++;
+
+  // Patents
+  writeFormulaRow(ws, row, 'Patents', NP, (p) => {
+    const ref = cellMap.get('plAssumptions', 'patents_active', p).toFormula();
+    return `-ABS(${ref})`;
+  }, plOutputs.patents, cellMap, sheetKey, 'patents', NUM_FMT.integer);
+  row++;
+
+  // Total OpEx (all 9 categories)
   writeFormulaRow(ws, row, 'Total OpEx', NP, (p) => {
     const cs = cellMap.get(sheetKey, 'commercialSales', p).toLocal();
     const ga = cellMap.get(sheetKey, 'gAndA', p).toLocal();
     const rd = cellMap.get(sheetKey, 'rAndD', p).toLocal();
-    return `${cs}+${ga}+${rd}`;
+    const ops = cellMap.get(sheetKey, 'operations', p).toLocal();
+    const qual = cellMap.get(sheetKey, 'quality', p).toLocal();
+    const clin = cellMap.get(sheetKey, 'clinical', p).toLocal();
+    const reg = cellMap.get(sheetKey, 'regulatory', p).toLocal();
+    const pv = cellMap.get(sheetKey, 'pharmacovigilance', p).toLocal();
+    const pat = cellMap.get(sheetKey, 'patents', p).toLocal();
+    return `${cs}+${ga}+${rd}+${ops}+${qual}+${clin}+${reg}+${pv}+${pat}`;
   }, plOutputs.totalOpEx, cellMap, sheetKey, 'totalOpEx', NUM_FMT.integer, true);
   row++;
 

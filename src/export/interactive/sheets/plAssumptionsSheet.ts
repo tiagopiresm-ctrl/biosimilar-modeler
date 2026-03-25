@@ -67,6 +67,36 @@ export function addInteractivePLAssumptionsSheet(
   row++;
   row = writeBlock('R&D', plAssumptions.rAndD, 'rAndD', NUM_FMT.integer).nextRow;
 
+  // ── Operations ──
+  writeSection(ws, row, 'Operations', colCount);
+  row++;
+  row = writeBlock('Operations', plAssumptions.operations, 'operations', NUM_FMT.integer).nextRow;
+
+  // ── Quality ──
+  writeSection(ws, row, 'Quality', colCount);
+  row++;
+  row = writeBlock('Quality', plAssumptions.quality, 'quality', NUM_FMT.integer).nextRow;
+
+  // ── Clinical ──
+  writeSection(ws, row, 'Clinical', colCount);
+  row++;
+  row = writeBlock('Clinical', plAssumptions.clinical, 'clinical', NUM_FMT.integer).nextRow;
+
+  // ── Regulatory ──
+  writeSection(ws, row, 'Regulatory', colCount);
+  row++;
+  row = writeBlock('Regulatory', plAssumptions.regulatory, 'regulatory', NUM_FMT.integer).nextRow;
+
+  // ── Pharmacovigilance ──
+  writeSection(ws, row, 'Pharmacovigilance', colCount);
+  row++;
+  row = writeBlock('Pharmacovigilance', plAssumptions.pharmacovigilance, 'pharmacovigilance', NUM_FMT.integer).nextRow;
+
+  // ── Patents ──
+  writeSection(ws, row, 'Patents', colCount);
+  row++;
+  row = writeBlock('Patents', plAssumptions.patents, 'patents', NUM_FMT.integer).nextRow;
+
   // ── D&A ──
   writeSection(ws, row, 'Depreciation & Amortization', colCount);
   row++;

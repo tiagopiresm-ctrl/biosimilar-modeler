@@ -177,6 +177,35 @@ export function addInteractiveKPIsSheet(
   row++;
 
   // ════════════════════════════════════════════════════════════
+  // Section: Payback
+  // ════════════════════════════════════════════════════════════
+  section(row, 'Payback');
+  row++;
+
+  // Payback Year (Undiscounted)
+  const pbRef = cellMap.getScalar('npv', 'paybackUndiscounted').toFormula();
+  writeKpiFormula(row, 'Payback Year (Undiscounted)', pbRef, npvOutputs.paybackUndiscounted ?? 'N/A', NUM_FMT.year, 'paybackUndiscounted');
+  row++;
+
+  // Payback Year (Discounted)
+  const pbdRef = cellMap.getScalar('npv', 'paybackDiscounted').toFormula();
+  writeKpiFormula(row, 'Payback Year (Discounted)', pbdRef, npvOutputs.paybackDiscounted ?? 'N/A', NUM_FMT.year, 'paybackDiscounted');
+  row++;
+
+  // Payback from Launch (years)
+  const pbFromLaunchRef = cellMap.getScalar('npv', 'paybackFromLaunch').toFormula();
+  writeKpiFormula(row, 'Payback from Launch (years)', pbFromLaunchRef, npvOutputs.paybackFromLaunchUndiscounted ?? 'N/A', NUM_FMT.decimal2, 'paybackFromLaunch');
+  row++;
+
+  // Discounted Payback from Launch (years)
+  const dpbFromLaunchRef = cellMap.getScalar('npv', 'discountedPaybackFromLaunch').toFormula();
+  writeKpiFormula(row, 'Disc. Payback from Launch (years)', dpbFromLaunchRef, npvOutputs.discountedPaybackFromLaunch ?? 'N/A', NUM_FMT.decimal2, 'discPaybackFromLaunch');
+  row++;
+
+  // Blank
+  row++;
+
+  // ════════════════════════════════════════════════════════════
   // Section: Peak Performance
   // ════════════════════════════════════════════════════════════
   section(row, 'Peak Performance');
@@ -189,4 +218,25 @@ export function addInteractiveKPIsSheet(
   // Peak EBIT Year (cached value)
   writeKpiValue(row, 'Peak EBIT Year', npvOutputs.peakEbitYear, NUM_FMT.year, 'peakEbitYear');
   row++;
+
+  // ════════════════════════════════════════════════════════════
+  // Section: Terminal Value (conditional)
+  // ════════════════════════════════════════════════════════════
+  if (ctx.config.terminalValueEnabled) {
+    row++;
+    section(row, 'Terminal Value');
+    row++;
+
+    try {
+      const tvNpvRef = cellMap.getScalar('npv', 'npvWithTV').toFormula();
+      writeKpiFormula(row, 'NPV incl. TV', tvNpvRef, npvOutputs.npvWithTV, NUM_FMT.integer, 'npvWithTV');
+      row++;
+    } catch { /* npvWithTV not registered if TV disabled */ }
+
+    try {
+      const tvRnpvRef = cellMap.getScalar('npv', 'rnpvWithTV').toFormula();
+      writeKpiFormula(row, 'rNPV incl. TV', tvRnpvRef, npvOutputs.rnpvWithTV, NUM_FMT.integer, 'rnpvWithTV');
+      row++;
+    } catch { /* rnpvWithTV not registered if TV disabled */ }
+  }
 }

@@ -192,18 +192,42 @@ function buildCountryModelSheet(
   writeSection(ws, row, 'Biosimilar', colCount);
   row++;
 
-  // 12. Biosimilar Share
-  writeFormulaRow(ws, row, 'Biosimilar Share', NP, (p) => {
+  // 12a. Biosimilar Penetration (total biosimilar share of molecule market)
+  writeFormulaRow(ws, row, 'Biosimilar Penetration', NP, (p) => {
     if (p < launchIdx) return '0';
-    return cellMap.get(inputKey, 'biosimilarMarketShare_active', p).toFormula();
+    return cellMap.get(inputKey, 'biosimilarPenetration_active', p).toFormula();
+  }, co.totalBiosimilarVolume.map((v, i) => co.marketVolume[i] > 0 ? v / co.marketVolume[i] : 0),
+    cellMap, sheetKey, 'biosimilarPenetration', NUM_FMT.percent);
+  row++;
+
+  // 12b. Total Biosimilar Volume = Market Volume × Biosimilar Penetration
+  writeFormulaRow(ws, row, 'Total Biosimilar Volume', NP, (p) => {
+    const mktVol = cellMap.get(sheetKey, 'marketVolume', p).toLocal();
+    const pen = cellMap.get(sheetKey, 'biosimilarPenetration', p).toLocal();
+    return `${mktVol}*${pen}`;
+  }, co.totalBiosimilarVolume, cellMap, sheetKey, 'totalBiosimilarVolume', NUM_FMT.integer);
+  row++;
+
+  // 12c. Our Share of Biosimilar
+  writeFormulaRow(ws, row, 'Our Share of Biosimilar', NP, (p) => {
+    if (p < launchIdx) return '0';
+    return cellMap.get(inputKey, 'ourShareOfBiosimilar_active', p).toFormula();
+  }, co.ourShareOfBiosimilarArr, cellMap, sheetKey, 'ourShareOfBiosimilar', NUM_FMT.percent);
+  row++;
+
+  // 12d. Our Market Share (= penetration × our share)
+  writeFormulaRow(ws, row, 'Our Market Share', NP, (p) => {
+    const pen = cellMap.get(sheetKey, 'biosimilarPenetration', p).toLocal();
+    const ourShr = cellMap.get(sheetKey, 'ourShareOfBiosimilar', p).toLocal();
+    return `${pen}*${ourShr}`;
   }, co.biosimilarShare, cellMap, sheetKey, 'biosimilarShare', NUM_FMT.percent);
   row++;
 
-  // 13. Biosimilar Volume
-  writeFormulaRow(ws, row, 'Biosimilar Volume', NP, (p) => {
-    const mktVol = cellMap.get(sheetKey, 'marketVolume', p).toLocal();
-    const share = cellMap.get(sheetKey, 'biosimilarShare', p).toLocal();
-    return `${mktVol}*${share}`;
+  // 13. Our Volume = Total Biosimilar Volume × Our Share
+  writeFormulaRow(ws, row, 'Our Volume', NP, (p) => {
+    const totalBioVol = cellMap.get(sheetKey, 'totalBiosimilarVolume', p).toLocal();
+    const ourShr = cellMap.get(sheetKey, 'ourShareOfBiosimilar', p).toLocal();
+    return `${totalBioVol}*${ourShr}`;
   }, co.biosimilarVolume, cellMap, sheetKey, 'biosimilarVolume', NUM_FMT.integer);
   row++;
 
@@ -233,11 +257,10 @@ function buildCountryModelSheet(
   writeSection(ws, row, 'Originator (Derived)', colCount);
   row++;
 
-  // 16. Originator Share
+  // 16. Originator Share = 1 - biosimilarPenetration (total, not just ours)
   writeFormulaRow(ws, row, 'Originator Share', NP, (p) => {
-    const genShare = cellMap.get(sheetKey, 'totalGenericShare', p).toLocal();
-    const bioShare = cellMap.get(sheetKey, 'biosimilarShare', p).toLocal();
-    return `MAX(0,1-${genShare}-${bioShare})`;
+    const biosPen = cellMap.get(sheetKey, 'biosimilarPenetration', p).toLocal();
+    return `MAX(0,1-${biosPen})`;
   }, co.originatorShare, cellMap, sheetKey, 'originatorShare', NUM_FMT.percent);
   row++;
 

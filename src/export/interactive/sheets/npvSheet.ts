@@ -181,6 +181,13 @@ export function addInteractiveNPVSheet(
     return `${firstRef}:${lastRef}`;
   };
 
+  // Helper: range string from launch period (for IRR from launch)
+  const launchRangeStr = (field: string): string => {
+    const firstRef = cellMap.get(sheetKey, field, loeIdx).toLocal();
+    const lastRef = cellMap.get(sheetKey, field, NP - 1).toLocal();
+    return `${firstRef}:${lastRef}`;
+  };
+
   // NPV
   const npvLabel = ws.getCell(row, 1);
   npvLabel.value = 'NPV';
@@ -203,25 +210,25 @@ export function addInteractiveNPVSheet(
   cellMap.registerScalar(sheetKey, 'rnpvValue', ws.name, cellAddr(row, 2));
   row++;
 
-  // IRR
+  // IRR (from launch period — not from period 0)
   const irrLabel = ws.getCell(row, 1);
-  irrLabel.value = 'IRR';
+  irrLabel.value = 'IRR (from launch)';
   irrLabel.font = BOLD_VALUE_FONT;
   const irrCell = ws.getCell(row, 2);
   const irrCached = npvOutputs.irr ?? 0;
-  irrCell.value = formulaValue(`IFERROR(IRR(${rangeStr('fcf')}),"N/A")`, irrCached);
+  irrCell.value = formulaValue(`IFERROR(IRR(${launchRangeStr('fcf')}),"N/A")`, irrCached);
   irrCell.numFmt = NUM_FMT.percent;
   irrCell.font = BOLD_VALUE_FONT;
   cellMap.registerScalar(sheetKey, 'irr', ws.name, cellAddr(row, 2));
   row++;
 
-  // rIRR
+  // rIRR (from launch period)
   const rirrLabel = ws.getCell(row, 1);
-  rirrLabel.value = 'rIRR';
+  rirrLabel.value = 'rIRR (from launch)';
   rirrLabel.font = BOLD_VALUE_FONT;
   const rirrCell = ws.getCell(row, 2);
   const rirrCached = npvOutputs.rirr ?? 0;
-  rirrCell.value = formulaValue(`IFERROR(IRR(${rangeStr('riskAdjFCF')}),"N/A")`, rirrCached);
+  rirrCell.value = formulaValue(`IFERROR(IRR(${launchRangeStr('riskAdjFCF')}),"N/A")`, rirrCached);
   rirrCell.numFmt = NUM_FMT.percent;
   rirrCell.font = BOLD_VALUE_FONT;
   cellMap.registerScalar(sheetKey, 'rirr', ws.name, cellAddr(row, 2));
@@ -249,7 +256,7 @@ export function addInteractiveNPVSheet(
   cellMap.registerScalar(sheetKey, 'fundingNeed', ws.name, cellAddr(row, 2));
   row++;
 
-  // Payback Undiscounted (cached value — array formulas are complex in ExcelJS)
+  // Payback Undiscounted — negative-to-positive crossover of cumulative FCF
   const pbLabel = ws.getCell(row, 1);
   pbLabel.value = 'Payback Year (Undiscounted)';
   pbLabel.font = LABEL_FONT;
@@ -271,6 +278,28 @@ export function addInteractiveNPVSheet(
   cellMap.registerScalar(sheetKey, 'paybackDiscounted', ws.name, cellAddr(row, 2));
   row++;
 
+  // Payback from Launch (undiscounted, years from launch)
+  const pbLaunchLabel = ws.getCell(row, 1);
+  pbLaunchLabel.value = 'Payback from Launch (years)';
+  pbLaunchLabel.font = LABEL_FONT;
+  const pbLaunchCell = ws.getCell(row, 2);
+  pbLaunchCell.value = npvOutputs.paybackFromLaunchUndiscounted ?? 'N/A';
+  pbLaunchCell.numFmt = NUM_FMT.decimal2;
+  pbLaunchCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'paybackFromLaunch', ws.name, cellAddr(row, 2));
+  row++;
+
+  // Discounted Payback from Launch (years from launch)
+  const dpbLaunchLabel = ws.getCell(row, 1);
+  dpbLaunchLabel.value = 'Discounted Payback from Launch (years)';
+  dpbLaunchLabel.font = LABEL_FONT;
+  const dpbLaunchCell = ws.getCell(row, 2);
+  dpbLaunchCell.value = npvOutputs.discountedPaybackFromLaunch ?? 'N/A';
+  dpbLaunchCell.numFmt = NUM_FMT.decimal2;
+  dpbLaunchCell.font = BOLD_VALUE_FONT;
+  cellMap.registerScalar(sheetKey, 'discountedPaybackFromLaunch', ws.name, cellAddr(row, 2));
+  row++;
+
   // ════════════════════════════════════════════════════════════
   // Section: Terminal Value (Gordon Growth Model)
   // ════════════════════════════════════════════════════════════
@@ -279,23 +308,35 @@ export function addInteractiveNPVSheet(
     writeSection(ws, row, 'Terminal Value (Gordon Growth Model)', colCount);
     row++;
 
-    // Terminal Value (undiscounted)
+    // Terminal Growth Rate (reference from Config)
+    const tvGrowthRef = cellMap.getScalar('config', 'terminalValueGrowthRate').toFormula();
+
+    // Last period FCF reference
+    const lastFcfRef = cellMap.get(sheetKey, 'fcf', NP - 1).toLocal();
+    // Last period discount factor reference
+    const lastDfRef = cellMap.get(sheetKey, 'discountFactor', NP - 1).toLocal();
+
+    // Terminal Value (undiscounted) = lastFCF × (1+g) / (WACC - g)
     const tvLabel = ws.getCell(row, 1);
     tvLabel.value = 'Terminal Value (undiscounted)';
     tvLabel.font = BOLD_VALUE_FONT;
     const tvCell = ws.getCell(row, 2);
-    tvCell.value = formulaValue('', npvOutputs.terminalValue);
+    tvCell.value = formulaValue(
+      `IFERROR(${lastFcfRef}*(1+${tvGrowthRef})/(${waccRef}-${tvGrowthRef}),0)`,
+      npvOutputs.terminalValue,
+    );
     tvCell.numFmt = NUM_FMT.integer;
     tvCell.font = BOLD_VALUE_FONT;
     cellMap.registerScalar(sheetKey, 'terminalValue', ws.name, cellAddr(row, 2));
     row++;
 
-    // Discounted Terminal Value
+    // Discounted Terminal Value = TV × last discount factor
     const dtvLabel = ws.getCell(row, 1);
     dtvLabel.value = 'Discounted Terminal Value';
     dtvLabel.font = BOLD_VALUE_FONT;
     const dtvCell = ws.getCell(row, 2);
-    dtvCell.value = formulaValue('', npvOutputs.discountedTerminalValue);
+    const tvRef = cellMap.getScalar(sheetKey, 'terminalValue').toLocal();
+    dtvCell.value = formulaValue(`${tvRef}*${lastDfRef}`, npvOutputs.discountedTerminalValue);
     dtvCell.numFmt = NUM_FMT.integer;
     dtvCell.font = BOLD_VALUE_FONT;
     cellMap.registerScalar(sheetKey, 'discountedTerminalValue', ws.name, cellAddr(row, 2));
@@ -307,19 +348,24 @@ export function addInteractiveNPVSheet(
     npvTvLabel.font = BOLD_VALUE_FONT;
     const npvTvCell = ws.getCell(row, 2);
     const npvRef = cellMap.getScalar(sheetKey, 'npvValue').toLocal();
-    const dtvRef = cellMap.getScalar(sheetKey, 'discountedTerminalValue').toLocal();
-    npvTvCell.value = formulaValue(`${npvRef}+${dtvRef}`, npvOutputs.npvWithTV);
+    const dtvRefLocal = cellMap.getScalar(sheetKey, 'discountedTerminalValue').toLocal();
+    npvTvCell.value = formulaValue(`${npvRef}+${dtvRefLocal}`, npvOutputs.npvWithTV);
     npvTvCell.numFmt = NUM_FMT.integer;
     npvTvCell.font = BOLD_VALUE_FONT;
     cellMap.registerScalar(sheetKey, 'npvWithTV', ws.name, cellAddr(row, 2));
     row++;
 
-    // rNPV incl. TV
+    // rNPV incl. TV = rNPV + discountedTV × last PoS
     const rnpvTvLabel = ws.getCell(row, 1);
     rnpvTvLabel.value = 'rNPV incl. TV';
     rnpvTvLabel.font = BOLD_VALUE_FONT;
     const rnpvTvCell = ws.getCell(row, 2);
-    rnpvTvCell.value = formulaValue('', npvOutputs.rnpvWithTV);
+    const rnpvRef = cellMap.getScalar(sheetKey, 'rnpvValue').toLocal();
+    const lastPosRef = cellMap.get(sheetKey, 'riskPoS', NP - 1).toLocal();
+    rnpvTvCell.value = formulaValue(
+      `${rnpvRef}+${dtvRefLocal}*${lastPosRef}`,
+      npvOutputs.rnpvWithTV,
+    );
     rnpvTvCell.numFmt = NUM_FMT.integer;
     rnpvTvCell.font = BOLD_VALUE_FONT;
     cellMap.registerScalar(sheetKey, 'rnpvWithTV', ws.name, cellAddr(row, 2));

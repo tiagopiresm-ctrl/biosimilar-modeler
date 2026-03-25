@@ -191,12 +191,21 @@ function buildCountrySheet(
   writeSection(ws, row, 'Biosimilar Assumptions', colCount);
   row++;
 
-  const biosimShare = sb(
-    ws, row, 'Biosimilar Market Share', country.biosimilarMarketShare,
-    NP, cellMap, sheetKey, 'biosimilarMarketShare',
+  // Biosimilar Penetration (total biosimilar share of molecule market)
+  const biosimPen = sb(
+    ws, row, 'Biosimilar Penetration', country.biosimilarPenetration,
+    NP, cellMap, sheetKey, 'biosimilarPenetration',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
-  row = biosimShare.nextRow;
+  row = biosimPen.nextRow;
+
+  // Our Share of Biosimilar
+  const ourShare = sb(
+    ws, row, 'Our Share of Biosimilar', country.ourShareOfBiosimilar,
+    NP, cellMap, sheetKey, 'ourShareOfBiosimilar',
+    NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
+  );
+  row = ourShare.nextRow;
 
   const biosimPrice = sb(
     ws, row, 'Biosimilar Price % of Originator', country.biosimilarPricePct,
@@ -269,6 +278,40 @@ function buildCountrySheet(
 
   // Blank
   row++;
+
+  // ════════════════════════════════════════════════════════════
+  // Section: Partner View Costs (conditional)
+  // ════════════════════════════════════════════════════════════
+  if (ctx.config.partnerViewEnabled) {
+    writeSection(ws, row, 'Partner View Costs', colCount);
+    row++;
+
+    writeInputRow(ws, row, 'Partner Promotional Costs', country.partnerPromotionalCosts ?? Array(NP).fill(0),
+      NP, cellMap, sheetKey, 'partnerPromotionalCosts', NUM_FMT.integer);
+    row++;
+
+    writeInputRow(ws, row, 'Partner Sales Force Costs', country.partnerSalesForceCosts ?? Array(NP).fill(0),
+      NP, cellMap, sheetKey, 'partnerSalesForceCosts', NUM_FMT.integer);
+    row++;
+
+    writeInputRow(ws, row, 'Partner Distribution Costs', country.partnerDistributionCosts ?? Array(NP).fill(0),
+      NP, cellMap, sheetKey, 'partnerDistributionCosts', NUM_FMT.integer);
+    row++;
+
+    writeInputRow(ws, row, 'Partner Manufacturing Costs', country.partnerManufacturingCosts ?? Array(NP).fill(0),
+      NP, cellMap, sheetKey, 'partnerManufacturingCosts', NUM_FMT.integer);
+    row++;
+
+    writeInputRow(ws, row, 'Partner G&A', country.partnerGAndA ?? Array(NP).fill(0),
+      NP, cellMap, sheetKey, 'partnerGAndA', NUM_FMT.integer);
+    row++;
+
+    writeScalarRow(ws, row, 'Partner Tax Rate', country.partnerTaxRate ?? 0.25, cellMap, sheetKey, 'partnerTaxRate', NUM_FMT.percent);
+    row++;
+
+    // Blank
+    row++;
+  }
 
   // ════════════════════════════════════════════════════════════
   // Section: Generic Competitors
