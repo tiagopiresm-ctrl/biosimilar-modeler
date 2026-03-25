@@ -103,6 +103,18 @@ export function ChartsPage() {
     return entry;
   });
 
+  // ---------- Chart 5 data: Our Supply Revenue by Country (FX-converted) ----------
+  const salesByCountryData = periodLabels.map((p, i) => {
+    const entry: Record<string, string | number> = {
+      period: p,
+      year: years[i],
+    };
+    countries.forEach((c, ci) => {
+      entry[c.name] = plOutputs.netSupplyRevenueByCountry[ci]?.[i] ?? 0;
+    });
+    return entry;
+  });
+
   // ---------- card wrapper ----------
   const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -298,6 +310,36 @@ export function ChartsPage() {
             />
             <Tooltip
               formatter={(value: unknown) => [fmtPercent(value as number), undefined]}
+              labelFormatter={(label: unknown, payload?: readonly unknown[]) => {
+                const yr = (payload as readonly { payload?: { year?: number } }[])?.[0]?.payload?.year;
+                return yr ? `${String(label)} (${yr})` : String(label);
+              }}
+            />
+            <Legend />
+            {countries.map((c, ci) => (
+              <Line
+                key={c.name}
+                type="monotone"
+                dataKey={c.name}
+                stroke={COUNTRY_COLORS[ci % COUNTRY_COLORS.length]}
+                strokeWidth={2}
+                dot={false}
+              />
+            ))}
+          </LineChart>
+        </ChartCard>
+
+        {/* ---- Chart 5: Our Sales by Country ---- */}
+        <ChartCard title={`Our Supply Revenue by Country (${currencyUnit})`}>
+          <LineChart data={salesByCountryData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+            <YAxis
+              tick={{ fontSize: 11 }}
+              tickFormatter={(v: number) => fmtCurrency(v)}
+            />
+            <Tooltip
+              formatter={(value: unknown) => [fmtCurrency(value as number), undefined]}
               labelFormatter={(label: unknown, payload?: readonly unknown[]) => {
                 const yr = (payload as readonly { payload?: { year?: number } }[])?.[0]?.payload?.year;
                 return yr ? `${String(label)} (${yr})` : String(label);
