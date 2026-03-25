@@ -327,10 +327,10 @@ export function SetupPage() {
               type="number"
               value={config.unitsPerGramOfAPI}
               onChange={(e) =>
-                updateConfig('unitsPerGramOfAPI', parseInt(e.target.value) || 1)
+                updateConfig('unitsPerGramOfAPI', parseFloat(e.target.value) || 1)
               }
-              min={1}
-              step={1}
+              min={0.01}
+              step={0.01}
               className={inputClass}
             />
             <p className="text-[10px] text-gray-400 mt-1">
