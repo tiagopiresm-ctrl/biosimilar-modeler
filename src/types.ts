@@ -108,8 +108,8 @@ export const API_PRICING_MODEL_LABELS: Record<ApiPricingModel, string> = {
 export type CogsInputMethod = 'perGram' | 'perUnit';
 
 export const COGS_INPUT_METHOD_LABELS: Record<CogsInputMethod, string> = {
-  perGram: 'Per Gram of API',
-  perUnit: 'Per Finished Unit',
+  perGram: 'API (cost per gram)',
+  perUnit: 'Standard Units (cost per unit)',
 };
 
 // ---- ROYALTY TIERS ----

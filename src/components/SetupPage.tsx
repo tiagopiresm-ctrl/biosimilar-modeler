@@ -384,11 +384,11 @@ export function SetupPage() {
             </>
           )}
 
-          {/* Per-Unit field: API Cost per Unit */}
+          {/* Per-Unit field: COGS per Standard Unit */}
           {(config.cogsInputMethod ?? 'perGram') === 'perUnit' && (
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                API Cost per Finished Unit ({config.currency})
+                COGS per Standard Unit ({config.currency})
               </label>
               <input
                 type="number"
@@ -397,11 +397,11 @@ export function SetupPage() {
                   updateConfig('apiCostPerUnit', parseFloat(e.target.value) || 0)
                 }
                 min={0}
-                step={1}
+                step={0.01}
                 className={inputClass}
               />
               <p className="text-[10px] text-gray-400 mt-1">
-                Total manufacturing cost per finished unit (tablet/vial)
+                Manufacturing cost per standard unit (tablet/vial)
               </p>
             </div>
           )}
