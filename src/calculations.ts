@@ -740,41 +740,8 @@ export function computeIRR(cashFlows: number[]): number | null {
   const hasNegative = cashFlows.some((cf) => cf < 0);
   if (!hasPositive || !hasNegative) return null;
 
-  const maxIterations = 200;
-  const tolerance = 1e-9;
-  let rate = 0.10;
-
-  for (let iter = 0; iter < maxIterations; iter++) {
-    let npv = 0;
-    let dNpv = 0;
-
-    for (let t = 0; t < cashFlows.length; t++) {
-      const factor = Math.pow(1 + rate, t);
-      if (!isFinite(factor) || factor === 0) break;
-      npv += cashFlows[t] / factor;
-      if (t > 0) {
-        dNpv -= (t * cashFlows[t]) / Math.pow(1 + rate, t + 1);
-      }
-    }
-
-    if (Math.abs(npv) < tolerance) {
-      return rate;
-    }
-
-    if (dNpv === 0 || !isFinite(dNpv)) {
-      rate += 0.01;
-      continue;
-    }
-
-    const newRate = rate - npv / dNpv;
-
-    if (!isFinite(newRate) || newRate < -0.999) {
-      return computeIRRBisection(cashFlows);
-    }
-
-    rate = newRate;
-  }
-
+  // Always use bisection — more robust than Newton-Raphson for
+  // biosimilar cash flow profiles (many leading zeros, large swings)
   return computeIRRBisection(cashFlows);
 }
 
@@ -783,7 +750,7 @@ export function computeIRR(cashFlows: number[]): number | null {
  */
 function computeIRRBisection(cashFlows: number[]): number | null {
   let lo = -0.99;
-  let hi = 10.0;
+  let hi = 5.0;  // max 500% IRR — reasonable upper bound
   const maxIter = 300;
   const tol = 1e-9;
 
