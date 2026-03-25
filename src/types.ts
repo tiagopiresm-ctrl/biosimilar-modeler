@@ -374,6 +374,8 @@ export interface NPVOutputs {
   paybackUndiscounted: number | null;
   paybackDiscounted: number | null;
   breakEvenYear: number | null;
+  breakEvenFromLaunchYears: number | null;  // years from earliest LOE to breakeven
+  discountedPaybackYears: number | null;    // years from earliest LOE to discounted payback
   peakEbitYear: number | null;
   peakEbitValue: number;
 }

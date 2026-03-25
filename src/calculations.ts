@@ -951,6 +951,15 @@ export function computeNPVOutputs(
     }
   }
 
+  // Breakeven from launch: years from earliest LOE to first positive cumulative FCF
+  const loeCalendarYear = pc.startYear + loeIdx;
+  const breakEvenFromLaunchYears: number | null =
+    paybackUndiscounted !== null ? paybackUndiscounted - loeCalendarYear : null;
+
+  // Discounted payback from launch: years from earliest LOE to cumulative discounted FCF > 0
+  const discountedPaybackYears: number | null =
+    paybackDiscounted !== null ? paybackDiscounted - loeCalendarYear : null;
+
   let peakEbitValue = -Infinity;
   let peakEbitYear: number | null = null;
   for (let i = 0; i < NP; i++) {
@@ -992,6 +1001,8 @@ export function computeNPVOutputs(
     paybackUndiscounted,
     paybackDiscounted,
     breakEvenYear,
+    breakEvenFromLaunchYears,
+    discountedPaybackYears,
     peakEbitYear,
     peakEbitValue,
   };

@@ -346,11 +346,25 @@ export function NPVPage() {
       isNA: npvOutputs.paybackDiscounted === null,
     },
     {
-      label: 'Break-Even',
+      label: 'Break-Even Year',
       value: formatYear(npvOutputs.breakEvenYear),
       isNegative: false,
       isPositive: npvOutputs.breakEvenYear !== null,
       isNA: npvOutputs.breakEvenYear === null,
+    },
+    {
+      label: 'Breakeven from Launch (yrs)',
+      value: npvOutputs.breakEvenFromLaunchYears !== null ? `${npvOutputs.breakEvenFromLaunchYears} yrs` : 'N/A',
+      isNegative: false,
+      isPositive: npvOutputs.breakEvenFromLaunchYears !== null,
+      isNA: npvOutputs.breakEvenFromLaunchYears === null,
+    },
+    {
+      label: 'Disc. Payback from Launch (yrs)',
+      value: npvOutputs.discountedPaybackYears !== null ? `${npvOutputs.discountedPaybackYears} yrs` : 'N/A',
+      isNegative: false,
+      isPositive: npvOutputs.discountedPaybackYears !== null,
+      isNA: npvOutputs.discountedPaybackYears === null,
     },
     {
       label: `Peak EBIT (${config.currency}'000)`,
