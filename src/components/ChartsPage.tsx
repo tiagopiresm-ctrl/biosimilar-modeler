@@ -45,6 +45,26 @@ export function ChartsPage() {
     return v.toFixed(1) + '%';
   };
 
+  // ---------- Chart 0 data: Market & Biosimilar Volumes ----------
+  const volumeData = periodLabels.map((p, i) => {
+    // Total market volume: sum across countries
+    const totalMarketVol = countryOutputs.reduce((sum, co) => sum + co.marketVolume[i], 0);
+    // Total biosimilar volume: sum of totalBiosimilarVolume across countries
+    const totalBiosimilarVol = countryOutputs.reduce((sum, co) => sum + co.totalBiosimilarVolume[i], 0);
+    // Our product volume: sum of biosimilarVolume across countries
+    const ourProductVol = countryOutputs.reduce((sum, co) => sum + co.biosimilarVolume[i], 0);
+    // Originator volume: sum of originatorVolume across countries
+    const originatorVol = countryOutputs.reduce((sum, co) => sum + co.originatorVolume[i], 0);
+    return {
+      period: p,
+      year: years[i],
+      totalMarket: totalMarketVol / 1000,
+      totalBiosimilar: totalBiosimilarVol / 1000,
+      ourProduct: ourProductVol / 1000,
+      originator: originatorVol / 1000,
+    };
+  });
+
   // ---------- Chart 1 data: Revenue Waterfall (Stacked Bar) ----------
   const revenueData = periodLabels.map((p, i) => ({
     period: p,
@@ -105,6 +125,45 @@ export function ChartsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ---- Chart 0: Market & Biosimilar Volumes ---- */}
+        <ChartCard title="Market & Biosimilar Volumes ('000 units)">
+          <LineChart data={volumeData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} />
+            <Tooltip
+              formatter={(value: unknown, name: unknown) => {
+                const labels: Record<string, string> = {
+                  totalMarket: 'Total Market Volume',
+                  totalBiosimilar: 'Total Biosimilar Volume',
+                  ourProduct: 'Our Product Volume',
+                  originator: 'Originator Volume',
+                };
+                return [fmtCurrency(value as number), labels[name as string] ?? name];
+              }}
+              labelFormatter={(label: unknown, payload?: readonly unknown[]) => {
+                const yr = (payload as readonly { payload?: { year?: number } }[])?.[0]?.payload?.year;
+                return yr ? `${String(label)} (${yr})` : String(label);
+              }}
+            />
+            <Legend
+              formatter={(value: string) => {
+                const labels: Record<string, string> = {
+                  totalMarket: 'Total Market Volume',
+                  totalBiosimilar: 'Total Biosimilar Volume',
+                  ourProduct: 'Our Product Volume',
+                  originator: 'Originator Volume',
+                };
+                return labels[value] ?? value;
+              }}
+            />
+            <Line type="monotone" dataKey="totalMarket" stroke="#9CA3AF" strokeWidth={2} strokeDasharray="6 3" dot={false} />
+            <Line type="monotone" dataKey="originator" stroke="#EF4444" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="totalBiosimilar" stroke="#F59E0B" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="ourProduct" stroke="#3B82F6" strokeWidth={2} dot={false} />
+          </LineChart>
+        </ChartCard>
+
         {/* ---- Chart 1: Revenue Waterfall ---- */}
         <ChartCard title={`Revenue Breakdown (${currencyUnit})`}>
           <BarChart data={revenueData}>

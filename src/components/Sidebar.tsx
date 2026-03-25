@@ -2,7 +2,7 @@ import { useStore } from '../store';
 import type { Page } from '../types';
 import { SCENARIO_LABELS } from '../types';
 import {
-  Settings, Table2, Globe, FileText, BarChart3, Calculator,
+  Settings, Table2, Globe, FileText, Calculator,
   TrendingUp, Target, GitBranch, PieChart, ChevronDown, ChevronRight,
   Download, Upload, FolderOpen, HardDrive, Users,
 } from 'lucide-react';
@@ -33,8 +33,7 @@ const navSections = [
   {
     label: 'Output',
     items: [
-      { page: 'summary' as Page, label: 'Summary', icon: BarChart3 },
-      { page: 'kpis' as Page, label: 'KPIs Dashboard', icon: Target },
+{ page: 'kpis' as Page, label: 'KPIs Dashboard', icon: Target },
       { page: 'decision-tree' as Page, label: 'Decision Tree', icon: GitBranch },
       { page: 'charts' as Page, label: 'Charts', icon: PieChart },
       { page: 'partner-view' as Page, label: 'Partner View', icon: Users },

@@ -386,8 +386,10 @@ export interface NPVOutputs {
   paybackUndiscounted: number | null;
   paybackDiscounted: number | null;
   breakEvenYear: number | null;
-  breakEvenFromLaunchYears: number | null;  // years from earliest LOE to breakeven
-  discountedPaybackYears: number | null;    // years from earliest LOE to discounted payback
+  breakEvenFromLaunchYears: number | null;  // years from earliest launch to breakeven (legacy alias)
+  discountedPaybackYears: number | null;    // years from earliest launch to discounted payback (legacy alias)
+  paybackFromLaunchUndiscounted: number | null; // years from launch (cumulating FCF from launch only)
+  discountedPaybackFromLaunch: number | null;   // years from launch (cumulating discounted FCF from launch only)
   peakEbitYear: number | null;
   peakEbitValue: number;
 }
@@ -426,7 +428,6 @@ export type Page =
   | 'setup'
   | 'assumptions'
   | `country-${number}`
-  | 'summary'
   | 'pnl'
   | 'wacc'
   | 'npv'

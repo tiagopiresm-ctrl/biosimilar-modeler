@@ -936,7 +936,7 @@ export function computeNPVOutputs(
   const irrStartIdx = Math.max(0, loeIdx - 1);
   const irr = computeIRR(fcf.slice(irrStartIdx));
   const rirr = computeIRR(riskAdjustedFCF.slice(irrStartIdx));
-  const moneyAtRisk = Math.min(...cumulativeFCF);
+  const moneyAtRisk = Math.min(...cumulativeFCF, 0); // cap at 0, never positive
   const fundingNeed = Math.min(...fcf);
 
   // Payback undiscounted: first year where cumulative FCF crosses from negative to positive
@@ -973,18 +973,36 @@ export function computeNPVOutputs(
     }
   }
 
-  // Breakeven from launch: years from EARLIEST BIOSIMILAR LAUNCH (not LOE) to payback
-  // Use the earliest biosimilarLaunchPeriodIndex across all countries
+  // Payback from launch: accumulate FCF starting from launch year only
+  // This isolates the product economics from pre-launch milestone cash
   const earliestLaunchIdx = countries.length > 0
     ? Math.min(...countries.map(c => (c as any).biosimilarLaunchPeriodIndex ?? loeIdx))
     : loeIdx;
-  const launchCalendarYear = pc.startYear + earliestLaunchIdx;
-  const breakEvenFromLaunchYears: number | null =
-    paybackUndiscounted !== null ? paybackUndiscounted - launchCalendarYear : null;
 
-  // Discounted payback from launch: years from biosimilar launch to discounted payback
-  const discountedPaybackYears: number | null =
-    paybackDiscounted !== null ? paybackDiscounted - launchCalendarYear : null;
+  let paybackFromLaunchUndiscounted: number | null = null;
+  let cumFCFFromLaunch = 0;
+  for (let i = earliestLaunchIdx; i < NP; i++) {
+    cumFCFFromLaunch += fcf[i];
+    if (cumFCFFromLaunch > 0) {
+      paybackFromLaunchUndiscounted = i - earliestLaunchIdx; // years from launch
+      break;
+    }
+  }
+
+  // Discounted payback from launch: same logic on discounted FCF starting from launch
+  let discountedPaybackFromLaunch: number | null = null;
+  let cumDiscFCFFromLaunch = 0;
+  for (let i = earliestLaunchIdx; i < NP; i++) {
+    cumDiscFCFFromLaunch += discountedFCF[i];
+    if (cumDiscFCFFromLaunch > 0) {
+      discountedPaybackFromLaunch = i - earliestLaunchIdx; // years from launch
+      break;
+    }
+  }
+
+  // Legacy aliases kept for backward compat
+  const breakEvenFromLaunchYears = paybackFromLaunchUndiscounted;
+  const discountedPaybackYears = discountedPaybackFromLaunch;
 
   let peakEbitValue = -Infinity;
   let peakEbitYear: number | null = null;
@@ -1029,6 +1047,8 @@ export function computeNPVOutputs(
     breakEvenYear,
     breakEvenFromLaunchYears,
     discountedPaybackYears,
+    paybackFromLaunchUndiscounted,
+    discountedPaybackFromLaunch,
     peakEbitYear,
     peakEbitValue,
   };

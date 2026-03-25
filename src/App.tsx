@@ -8,7 +8,7 @@ import { WACCPage } from './components/WACCPage';
 import { NPVPage } from './components/NPVPage';
 import { KPIsPage } from './components/KPIsPage';
 import { DecisionTreePage } from './components/DecisionTreePage';
-import { SummaryPage } from './components/SummaryPage';
+
 import { ChartsPage } from './components/ChartsPage';
 import { ProjectLibraryPage } from './components/ProjectLibraryPage';
 import { PartnerViewPage } from './components/PartnerViewPage';
@@ -37,9 +37,7 @@ function AppContent() {
       return <KPIsPage />;
     case 'decision-tree':
       return <DecisionTreePage />;
-    case 'summary':
-      return <SummaryPage />;
-    case 'charts':
+case 'charts':
       return <ChartsPage />;
     case 'partner-view':
       return <PartnerViewPage />;

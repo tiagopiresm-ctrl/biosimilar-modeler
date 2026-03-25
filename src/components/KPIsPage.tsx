@@ -71,6 +71,16 @@ export function KPIsPage() {
   const ccy = config.currency;
   const scenarioLabel = SCENARIO_LABELS[config.activeScenario];
 
+  // Compute Peak Revenue Year
+  let peakRevenueValue = 0;
+  let peakRevenueYear: number | null = null;
+  for (let i = 0; i < pc.numPeriods; i++) {
+    if (plOutputs.totalRevenue[i] > peakRevenueValue) {
+      peakRevenueValue = plOutputs.totalRevenue[i];
+      peakRevenueYear = pc.startYear + i;
+    }
+  }
+
   return (
     <div>
       <div className="flex items-start justify-between mb-6">
@@ -90,7 +100,7 @@ export function KPIsPage() {
           Valuation Metrics
         </h3>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {/* NPV */}
         <div className={`bg-white rounded-xl shadow-md p-6 border border-gray-100 ${cardAccent(npvOutputs.npv)}`}>
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -122,6 +132,17 @@ export function KPIsPage() {
             {npvOutputs.irr !== null ? formatPercent(npvOutputs.irr, 1) : 'N/A'}
           </div>
           <div className="text-xs text-gray-400 mt-1">Internal Rate of Return</div>
+        </div>
+
+        {/* rIRR */}
+        <div className={`bg-white rounded-xl shadow-md p-6 border border-gray-100 ${cardAccent(npvOutputs.rirr)}`}>
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            rIRR
+          </div>
+          <div className={`text-3xl font-bold ${npvOutputs.rirr !== null ? valueColor(npvOutputs.rirr) : 'text-gray-400'}`}>
+            {npvOutputs.rirr !== null ? formatPercent(npvOutputs.rirr, 1) : 'N/A'}
+          </div>
+          <div className="text-xs text-gray-400 mt-1">Risk-adjusted IRR</div>
         </div>
 
         {/* eNPV */}
@@ -161,54 +182,54 @@ export function KPIsPage() {
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
             Money at Risk
           </div>
-          <div className={`text-2xl font-bold ${valueColor(npvOutputs.moneyAtRisk)}`}>
-            {formatNumber(npvOutputs.moneyAtRisk, 0)}
+          <div className={`text-2xl font-bold ${npvOutputs.moneyAtRisk < 0 ? valueColor(npvOutputs.moneyAtRisk) : 'text-gray-400'}`}>
+            {npvOutputs.moneyAtRisk < 0 ? formatNumber(npvOutputs.moneyAtRisk, 0) : 'N/A'}
           </div>
-          <div className="text-xs text-gray-400 mt-1">{ccy}'000 (min cumulative FCF)</div>
+          <div className="text-xs text-gray-400 mt-1">{ccy}'000 (deepest cumulative FCF trough)</div>
         </div>
 
-        {/* Funding Need */}
-        <div className={`bg-white rounded-xl shadow-md p-5 border border-gray-100 ${cardAccent(npvOutputs.fundingNeed)}`}>
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Funding Need
-          </div>
-          <div className={`text-2xl font-bold ${valueColor(npvOutputs.fundingNeed)}`}>
-            {formatNumber(npvOutputs.fundingNeed, 0)}
-          </div>
-          <div className="text-xs text-gray-400 mt-1">{ccy}'000 (min single-period FCF)</div>
-        </div>
-
-        {/* Break-Even */}
-        <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100 border-l-4 border-l-amber-400">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Break-Even Year
-          </div>
-          <div className={`text-2xl font-bold ${npvOutputs.breakEvenYear !== null ? 'text-amber-600' : 'text-gray-400'}`}>
-            {formatYear(npvOutputs.breakEvenYear)}
-          </div>
-          <div className="text-xs text-gray-400 mt-1">First FCF-positive period</div>
-        </div>
-
-        {/* Payback (Undiscounted) */}
+        {/* Payback Year (Undiscounted) — calendar year */}
         <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100 border-l-4 border-l-indigo-400">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Payback (Undiscounted)
+            Payback Year (Undiscounted)
           </div>
           <div className={`text-2xl font-bold ${npvOutputs.paybackUndiscounted !== null ? 'text-indigo-600' : 'text-gray-400'}`}>
             {formatYear(npvOutputs.paybackUndiscounted)}
           </div>
-          <div className="text-xs text-gray-400 mt-1">Cumulative FCF turns positive</div>
+          <div className="text-xs text-gray-400 mt-1">Calendar year — cumulative FCF positive</div>
         </div>
 
-        {/* Payback (Discounted) */}
+        {/* Payback Year (Discounted) — calendar year */}
         <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100 border-l-4 border-l-violet-400">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Payback (Discounted)
+            Payback Year (Discounted)
           </div>
           <div className={`text-2xl font-bold ${npvOutputs.paybackDiscounted !== null ? 'text-violet-600' : 'text-gray-400'}`}>
             {formatYear(npvOutputs.paybackDiscounted)}
           </div>
-          <div className="text-xs text-gray-400 mt-1">Discounted cumulative FCF positive</div>
+          <div className="text-xs text-gray-400 mt-1">Calendar year — discounted cumulative positive</div>
+        </div>
+
+        {/* Payback from Launch (Undiscounted, years) */}
+        <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100 border-l-4 border-l-cyan-400">
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Payback from Launch (yrs)
+          </div>
+          <div className={`text-2xl font-bold ${npvOutputs.paybackFromLaunchUndiscounted !== null ? 'text-cyan-600' : 'text-gray-400'}`}>
+            {npvOutputs.paybackFromLaunchUndiscounted !== null ? `${npvOutputs.paybackFromLaunchUndiscounted} yr${npvOutputs.paybackFromLaunchUndiscounted !== 1 ? 's' : ''}` : 'N/A'}
+          </div>
+          <div className="text-xs text-gray-400 mt-1">Undiscounted, from launch</div>
+        </div>
+
+        {/* Discounted Payback from Launch (years) */}
+        <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100 border-l-4 border-l-purple-400">
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Disc. Payback from Launch (yrs)
+          </div>
+          <div className={`text-2xl font-bold ${npvOutputs.discountedPaybackFromLaunch !== null ? 'text-purple-600' : 'text-gray-400'}`}>
+            {npvOutputs.discountedPaybackFromLaunch !== null ? `${npvOutputs.discountedPaybackFromLaunch} yr${npvOutputs.discountedPaybackFromLaunch !== 1 ? 's' : ''}` : 'N/A'}
+          </div>
+          <div className="text-xs text-gray-400 mt-1">Discounted, from launch</div>
         </div>
       </div>
 
@@ -220,7 +241,7 @@ export function KPIsPage() {
           P&L Highlights
         </h3>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {/* Peak EBIT */}
         <div className={`bg-white rounded-xl shadow-md p-5 border border-gray-100 ${cardAccent(npvOutputs.peakEbitValue)}`}>
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -232,6 +253,17 @@ export function KPIsPage() {
           <div className="text-xs text-gray-400 mt-1">
             {ccy}'000 at {formatYear(npvOutputs.peakEbitYear)}
           </div>
+        </div>
+
+        {/* Peak Revenue Year */}
+        <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100 border-l-4 border-l-orange-400">
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Peak Revenue Year
+          </div>
+          <div className={`text-2xl font-bold ${peakRevenueYear !== null ? 'text-orange-600' : 'text-gray-400'}`}>
+            {formatYear(peakRevenueYear)}
+          </div>
+          <div className="text-xs text-gray-400 mt-1">{ccy}'000 {formatNumber(peakRevenueValue, 0)}</div>
         </div>
 
         {/* Cumulative FCF (final period) */}
@@ -422,6 +454,60 @@ export function KPIsPage() {
           </table>
         </div>
       </div>
+
+      {/* ================================================================
+          SECTION 6 — Terminal Value KPIs (conditional)
+          ================================================================ */}
+      {config.terminalValueEnabled && (
+        <>
+          <div className="mb-2">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+              Terminal Value
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className={`bg-white rounded-xl shadow-md p-5 border border-gray-100 ${cardAccent(npvOutputs.terminalValue)}`}>
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                Terminal Value
+              </div>
+              <div className={`text-2xl font-bold ${valueColor(npvOutputs.terminalValue)}`}>
+                {formatNumber(npvOutputs.terminalValue, 0)}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">{ccy}'000 (undiscounted)</div>
+            </div>
+
+            <div className={`bg-white rounded-xl shadow-md p-5 border border-gray-100 ${cardAccent(npvOutputs.discountedTerminalValue)}`}>
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                Discounted TV
+              </div>
+              <div className={`text-2xl font-bold ${valueColor(npvOutputs.discountedTerminalValue)}`}>
+                {formatNumber(npvOutputs.discountedTerminalValue, 0)}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">{ccy}'000 (PV of TV)</div>
+            </div>
+
+            <div className={`bg-white rounded-xl shadow-md p-5 border border-gray-100 ${cardAccent(npvOutputs.npvWithTV)}`}>
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                NPV + TV
+              </div>
+              <div className={`text-2xl font-bold ${valueColor(npvOutputs.npvWithTV)}`}>
+                {formatNumber(npvOutputs.npvWithTV, 0)}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">{ccy}'000</div>
+            </div>
+
+            <div className={`bg-white rounded-xl shadow-md p-5 border border-gray-100 ${cardAccent(npvOutputs.rnpvWithTV)}`}>
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                rNPV + TV
+              </div>
+              <div className={`text-2xl font-bold ${valueColor(npvOutputs.rnpvWithTV)}`}>
+                {formatNumber(npvOutputs.rnpvWithTV, 0)}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">{ccy}'000 (risk-adjusted)</div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ================================================================
           Footer — Scenario / Config Info Bar
