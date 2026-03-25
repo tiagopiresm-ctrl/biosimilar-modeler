@@ -114,12 +114,12 @@ export function PLPage() {
         <ScenarioSelector activeScenario={config.activeScenario} onSelect={setScenario} scenarioMode={config.scenarioMode} />
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-scroll max-h-[calc(100vh-160px)] overflow-y-auto border border-gray-200 rounded-lg">
         <table className="w-full text-sm border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-20">
             <tr>
-              <th className="header-cell text-left sticky left-0 bg-gray-100 z-10 min-w-[250px]">Line Item</th>
-              <th className="header-cell text-left w-16">Units</th>
+              <th className="header-cell text-left sticky left-0 bg-gray-100 z-30 min-w-[250px]">Line Item</th>
+              <th className="header-cell text-left w-16 bg-gray-100">Units</th>
               {periodLabels.map((p, i) => (
                 <th key={i} className="header-cell text-right min-w-[85px]">
                   <div className="text-[10px] text-gray-400">{years[i]}</div>
