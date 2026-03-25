@@ -104,18 +104,6 @@ export function CountryModelPage({ countryIndex }: Props) {
     );
   };
 
-  // Build individual generic rows
-  const genericRows: RowDef[] = [];
-
-  for (const g of outputs.genericOutputs) {
-    genericRows.push(
-      { label: `${g.name} — Market Share`, unit: '%', data: g.share, format: 'percent', decimals: 1, indent: true },
-      { label: `${g.name} — Volume`, unit: `'000 ${uShort}s`, data: g.volume, decimals: 0, indent: true },
-      { label: `${g.name} — Price`, unit: `${lc}/${uShort}`, data: g.price, decimals: 2, indent: true },
-      { label: `${g.name} — Sales Value`, unit: `${lc}'000`, data: g.sales, decimals: 0, indent: true },
-    );
-  }
-
   return (
     <div>
       <PageHeader
@@ -129,22 +117,20 @@ export function CountryModelPage({ countryIndex }: Props) {
         { label: 'Originator Reference Price', unit: `${lc}/${uShort}`, data: outputs.originatorRefPrice, decimals: 2 },
       ])}
 
-      {renderTable('B', 'B. ORIGINATOR (Derived: 100% - Generics - Biosimilar)', [
+      {renderTable('B', 'B. ORIGINATOR (Derived: 100% - Biosimilar Penetration)', [
         { label: 'Originator Market Share', unit: '%', data: outputs.originatorShare, format: 'percent', decimals: 1, highlight: true },
         { label: 'Originator Volume', unit: "'000 units", data: outputs.originatorVolume, decimals: 0 },
         { label: 'Originator Sales Value', unit: `${lc}'000`, data: outputs.originatorSales, decimals: 0 },
       ])}
 
-      {renderTable('C', 'C. GENERICS (Individual)', [
-        ...genericRows,
-        { label: 'Total Generic Market Share', unit: '%', data: outputs.totalGenericShare, format: 'percent', decimals: 1, isBold: true, highlight: true },
-        { label: 'Total Generic Volume', unit: "'000 units", data: outputs.totalGenericVolume, decimals: 0, isBold: true },
-        { label: 'Total Generic Sales Value', unit: `${lc}'000`, data: outputs.totalGenericSales, decimals: 0, isBold: true },
+      {renderTable('C', 'C. BIOSIMILAR MARKET', [
+        { label: 'Total Biosimilar Volume', unit: "'000 units", data: outputs.totalBiosimilarVolume, decimals: 0, isBold: true },
+        { label: 'Our Share of Biosimilar', unit: '%', data: outputs.ourShareOfBiosimilarArr, format: 'percent', decimals: 1, highlight: true },
       ])}
 
       {renderTable('D', 'D. OUR BIOSIMILAR — In-Market Performance', [
-        { label: 'Biosimilar Market Share', unit: '%', data: outputs.biosimilarShare, format: 'percent', decimals: 1 },
-        { label: 'Biosimilar Volume', unit: "'000 units", data: outputs.biosimilarVolume, decimals: 0 },
+        { label: 'Our Market Share (of total)', unit: '%', data: outputs.biosimilarShare, format: 'percent', decimals: 1 },
+        { label: 'Our Volume', unit: "'000 units", data: outputs.biosimilarVolume, decimals: 0 },
         { label: 'Biosimilar In-Market Price', unit: `${lc}/${uShort}`, data: outputs.biosimilarInMarketPrice, decimals: 2 },
         { label: 'Biosimilar In-Market Sales', unit: `${lc}'000`, data: outputs.biosimilarInMarketSales, decimals: 0 },
       ])}

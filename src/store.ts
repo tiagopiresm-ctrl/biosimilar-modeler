@@ -24,6 +24,7 @@ import { computePeriodConfig, getCountryLoeIndex, DEFAULT_LOE_INDEX } from './ty
 import {
   createInitialState,
   createDefaultCountry,
+  createGlobalCountry,
   createPeriodArray,
   createScenarioRow,
   syncGenericCompetitors,
@@ -191,6 +192,8 @@ function flattenToBase(state: ModelState): Partial<ModelState> {
     originatorPriceGrowth: flatRow(c.originatorPriceGrowth),
     biosimilarPricePct: flatRow(c.biosimilarPricePct),
     biosimilarMarketShare: flatRow(c.biosimilarMarketShare),
+    biosimilarPenetration: flatRow(c.biosimilarPenetration),
+    ourShareOfBiosimilar: flatRow(c.ourShareOfBiosimilar),
     partnerGtnPct: flatRow(c.partnerGtnPct),
     supplyPricePct: flatRow(c.supplyPricePct),
     fixedSupplyPricePerGram: flatRow(c.fixedSupplyPricePerGram),
@@ -202,6 +205,7 @@ function flattenToBase(state: ModelState): Partial<ModelState> {
     })),
   }));
 
+  const emptyRow: ScenarioRow = { bear: [], base: [], bull: [] };
   const plAssumptions: PLAssumptions = {
     ...state.plAssumptions,
     commercialSales: flatRow(state.plAssumptions.commercialSales),
@@ -209,8 +213,14 @@ function flattenToBase(state: ModelState): Partial<ModelState> {
     rAndD: flatRow(state.plAssumptions.rAndD),
     dAndA: flatRow(state.plAssumptions.dAndA),
     taxRate: flatRow(state.plAssumptions.taxRate),
-    financialCosts: state.plAssumptions.financialCosts ? flatRow(state.plAssumptions.financialCosts) : { bear: [], base: [], bull: [] },
-    otherIncome: state.plAssumptions.otherIncome ? flatRow(state.plAssumptions.otherIncome) : { bear: [], base: [], bull: [] },
+    financialCosts: state.plAssumptions.financialCosts ? flatRow(state.plAssumptions.financialCosts) : emptyRow,
+    otherIncome: state.plAssumptions.otherIncome ? flatRow(state.plAssumptions.otherIncome) : emptyRow,
+    operations: state.plAssumptions.operations ? flatRow(state.plAssumptions.operations) : emptyRow,
+    quality: state.plAssumptions.quality ? flatRow(state.plAssumptions.quality) : emptyRow,
+    clinical: state.plAssumptions.clinical ? flatRow(state.plAssumptions.clinical) : emptyRow,
+    regulatory: state.plAssumptions.regulatory ? flatRow(state.plAssumptions.regulatory) : emptyRow,
+    pharmacovigilance: state.plAssumptions.pharmacovigilance ? flatRow(state.plAssumptions.pharmacovigilance) : emptyRow,
+    patents: state.plAssumptions.patents ? flatRow(state.plAssumptions.patents) : emptyRow,
   };
 
   const waccInputs: WACCInputs = {
@@ -522,6 +532,23 @@ export const useStore = create<ModelState & StoreActions>()(
             config.activeScenario = 2;
             const wiped = flattenToBase({ ...state, config });
             return { config, ...wiped };
+          }
+          // When toggling useGlobalCountry
+          if (field === 'useGlobalCountry') {
+            const pc = computePeriodConfig(config);
+            if (value === true) {
+              // Replace all countries with a single Global country
+              const globalCountry = createGlobalCountry(pc.numPeriods, pc.startYear, 2030, config.currency);
+              return { config, countries: [globalCountry] };
+            } else {
+              // Restore default 3 countries
+              const countries = [
+                createDefaultCountry('United States', pc.numPeriods, DEFAULT_LOE_INDEX, pc.startYear, 2030),
+                createDefaultCountry('Germany', pc.numPeriods, DEFAULT_LOE_INDEX, pc.startYear, 2030),
+                createDefaultCountry('Japan', pc.numPeriods, DEFAULT_LOE_INDEX, pc.startYear, 2030),
+              ];
+              return { config, countries };
+            }
           }
           return { config };
         }),

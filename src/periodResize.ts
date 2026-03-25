@@ -92,6 +92,8 @@ export function resizeCountry(
     originatorPriceGrowth: resizeScenarioRow(c.originatorPriceGrowth, oldPc, newPc, 0),
     biosimilarPricePct: resizeScenarioRow(c.biosimilarPricePct, oldPc, newPc, 0),
     biosimilarMarketShare: resizeScenarioRow(c.biosimilarMarketShare, oldPc, newPc, 0),
+    biosimilarPenetration: c.biosimilarPenetration ? resizeScenarioRow(c.biosimilarPenetration, oldPc, newPc, 0) : { bear: [], base: [], bull: [] },
+    ourShareOfBiosimilar: c.ourShareOfBiosimilar ? resizeScenarioRow(c.ourShareOfBiosimilar, oldPc, newPc, 0) : { bear: [], base: [], bull: [] },
     partnerGtnPct: resizeScenarioRow(c.partnerGtnPct, oldPc, newPc, 0),
     supplyPricePct: resizeScenarioRow(c.supplyPricePct, oldPc, newPc, 0),
     royaltyRatePct: resizeScenarioRow(c.royaltyRatePct, oldPc, newPc, 0),
@@ -114,6 +116,7 @@ export function resizePLAssumptions(
   oldPc: PeriodConfig,
   newPc: PeriodConfig,
 ): PLAssumptions {
+  const emptyRow = { bear: [] as number[], base: [] as number[], bull: [] as number[] };
   return {
     ...pl,
     commercialSales: resizeScenarioRow(pl.commercialSales, oldPc, newPc, 0),
@@ -123,6 +126,12 @@ export function resizePLAssumptions(
     taxRate: resizeScenarioRow(pl.taxRate, oldPc, newPc, 0.25),
     financialCosts: resizeScenarioRow(pl.financialCosts, oldPc, newPc, 0),
     otherIncome: resizeScenarioRow(pl.otherIncome, oldPc, newPc, 0),
+    operations: pl.operations ? resizeScenarioRow(pl.operations, oldPc, newPc, 0) : emptyRow,
+    quality: pl.quality ? resizeScenarioRow(pl.quality, oldPc, newPc, 0) : emptyRow,
+    clinical: pl.clinical ? resizeScenarioRow(pl.clinical, oldPc, newPc, 0) : emptyRow,
+    regulatory: pl.regulatory ? resizeScenarioRow(pl.regulatory, oldPc, newPc, 0) : emptyRow,
+    pharmacovigilance: pl.pharmacovigilance ? resizeScenarioRow(pl.pharmacovigilance, oldPc, newPc, 0) : emptyRow,
+    patents: pl.patents ? resizeScenarioRow(pl.patents, oldPc, newPc, 0) : emptyRow,
   };
 }
 

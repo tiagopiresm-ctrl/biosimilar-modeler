@@ -94,7 +94,12 @@ export function computeCountryOutputs(
   // Resolve active scenario rows
   const volumeAdjustment = getActiveRow(country.volumeAdjustment, s);
   const originatorPriceGrowth = getActiveRow(country.originatorPriceGrowth, s);
-  const biosimilarShareArr = getActiveRow(country.biosimilarMarketShare, s);
+  const biosimilarPenetrationArr = country.biosimilarPenetration
+    ? getActiveRow(country.biosimilarPenetration, s)
+    : getActiveRow(country.biosimilarMarketShare, s); // fallback for old data
+  const ourShareOfBiosimilarArr = country.ourShareOfBiosimilar
+    ? getActiveRow(country.ourShareOfBiosimilar, s)
+    : createPeriodArray(1, NP); // fallback: assume 100% of biosimilar = ours
   const biosimilarPricePctArr = getActiveRow(country.biosimilarPricePct, s);
   const partnerGtnPctArr = getActiveRow(country.partnerGtnPct, s);
   const supplyPricePctArr = getActiveRow(country.supplyPricePct, s);
@@ -110,6 +115,8 @@ export function computeCountryOutputs(
 
   // Market volume depends on forecast method (global setting)
   const forecastStartIndex = config.forecastStartYear - pc.startYear;
+  // Change 2: when no historical years, first year uses direct input as seed
+  const noHistorical = forecastStartIndex <= 0;
 
   if (config.volumeForecastMethod === 'atcShare') {
     // ATC Share method:
@@ -120,7 +127,7 @@ export function computeCountryOutputs(
     // Build ATC class volume: historical = direct input, forecast = compound growth
     const atcVolume = createPeriodArray(0, NP);
     for (let i = 0; i < NP; i++) {
-      if (i < forecastStartIndex) {
+      if (i < forecastStartIndex || (noHistorical && i === 0)) {
         atcVolume[i] = country.atcClassVolume[i] ?? 0;
       } else {
         const prev = i === 0 ? 0 : atcVolume[i - 1];
@@ -130,7 +137,7 @@ export function computeCountryOutputs(
 
     // Molecule volume: historical = direct input, forecast = ATC volume × molecule share
     for (let i = 0; i < NP; i++) {
-      if (i < forecastStartIndex) {
+      if (i < forecastStartIndex || (noHistorical && i === 0)) {
         marketVolume[i] = country.marketVolume[i] ?? 0;
       } else {
         marketVolume[i] = safeNumber(
@@ -143,7 +150,7 @@ export function computeCountryOutputs(
     //   Historical: direct input (no adjustment)
     //   Forecast: compound forward from last historical using volumeAdjustment growth rate
     for (let i = 0; i < NP; i++) {
-      if (i < forecastStartIndex) {
+      if (i < forecastStartIndex || (noHistorical && i === 0)) {
         marketVolume[i] = country.marketVolume[i] ?? 0;
       } else {
         const prev = i === 0 ? 0 : marketVolume[i - 1];
@@ -161,7 +168,7 @@ export function computeCountryOutputs(
       : safeDivide(marketVolume[i] - marketVolume[i - 1], marketVolume[i - 1]);
 
     // Originator price: historical periods use manual input, forecast compounds from last historical
-    if (i < forecastStart) {
+    if (i < forecastStart || (noHistorical && i === 0)) {
       originatorRefPrice[i] = country.originatorPrice[i] ?? 0;
     } else {
       originatorRefPrice[i] = safeNumber(
@@ -214,26 +221,28 @@ export function computeCountryOutputs(
     });
   }
 
-  // ---- Pre-compute gated biosimilar share for originator derivation ----
-  const gatedBiosimilarShare = createPeriodArray(0, NP);
+  // ---- Pre-compute gated biosimilar penetration for originator derivation ----
+  const gatedBiosimilarPenetration = createPeriodArray(0, NP);
   for (let i = 0; i < NP; i++) {
-    gatedBiosimilarShare[i] = i < country.biosimilarLaunchPeriodIndex ? 0 : biosimilarShareArr[i];
+    gatedBiosimilarPenetration[i] = i < country.biosimilarLaunchPeriodIndex ? 0 : biosimilarPenetrationArr[i];
   }
 
-  // ---- B. Originator (DERIVED: 100% - sum(generics) - biosimilar) ----
+  // ---- B. Originator (DERIVED: 100% - biosimilar penetration) ----
   const originatorShare = createPeriodArray(0, NP);
   const originatorVolume = createPeriodArray(0, NP);
   const originatorSales = createPeriodArray(0, NP);
 
   for (let i = 0; i < NP; i++) {
     originatorShare[i] = safeNumber(
-      Math.max(0, 1 - totalGenericShare[i] - gatedBiosimilarShare[i]),
+      Math.max(0, 1 - gatedBiosimilarPenetration[i]),
     );
     originatorVolume[i] = safeNumber(marketVolume[i] * originatorShare[i]);
     originatorSales[i] = safeNumber(originatorVolume[i] * originatorRefPrice[i]);
   }
 
-  // ---- D. Biosimilar ----
+  // ---- D. Biosimilar (simplified: penetration × our share) ----
+  const totalBiosimilarVolume = createPeriodArray(0, NP);
+  const ourShareOfBiosimilarArrOut = createPeriodArray(0, NP);
   const biosimilarShare = createPeriodArray(0, NP);
   const biosimilarVolume = createPeriodArray(0, NP);
   const biosimilarInMarketPrice = createPeriodArray(0, NP);
@@ -257,6 +266,8 @@ export function computeCountryOutputs(
   for (let i = 0; i < NP; i++) {
     // Biosimilar launch gating: zero everything before launch period
     if (i < country.biosimilarLaunchPeriodIndex) {
+      totalBiosimilarVolume[i] = 0;
+      ourShareOfBiosimilarArrOut[i] = 0;
       biosimilarShare[i] = 0;
       biosimilarVolume[i] = 0;
       biosimilarInMarketPrice[i] = 0;
@@ -275,8 +286,11 @@ export function computeCountryOutputs(
       continue;
     }
 
-    biosimilarShare[i] = biosimilarShareArr[i];
-    biosimilarVolume[i] = safeNumber(marketVolume[i] * biosimilarShare[i]);
+    // Simplified market share: total biosimilar volume, then our share of that
+    totalBiosimilarVolume[i] = safeNumber(marketVolume[i] * biosimilarPenetrationArr[i]);
+    ourShareOfBiosimilarArrOut[i] = ourShareOfBiosimilarArr[i];
+    biosimilarShare[i] = safeNumber(biosimilarPenetrationArr[i] * ourShareOfBiosimilarArr[i]);
+    biosimilarVolume[i] = safeNumber(totalBiosimilarVolume[i] * ourShareOfBiosimilarArr[i]);
     biosimilarInMarketPrice[i] = safeNumber(
       originatorRefPrice[i] * biosimilarPricePctArr[i],
     );
@@ -295,10 +309,10 @@ export function computeCountryOutputs(
       partnerNetSellingPrice[i] * biosimilarVolume[i],
     );
 
-    // API Grams Supplied = volume / unitsPerGramOfAPI × (1 + overage)
+    // API Grams Supplied = volume / unitsPerGramOfAPI (no overage)
     const unitsPerGram = config.unitsPerGramOfAPI > 0 ? config.unitsPerGramOfAPI : 1;
     apiGramsSupplied[i] = safeNumber(
-      (biosimilarVolume[i] / unitsPerGram) * (1 + config.manufacturingOverage),
+      biosimilarVolume[i] / unitsPerGram,
     );
 
     // Revenue model depends on API pricing mode
@@ -391,6 +405,8 @@ export function computeCountryOutputs(
     totalGenericShare,
     totalGenericVolume,
     totalGenericSales,
+    totalBiosimilarVolume,
+    ourShareOfBiosimilarArr: ourShareOfBiosimilarArrOut,
     biosimilarShare,
     biosimilarVolume,
     biosimilarInMarketPrice,
@@ -514,10 +530,23 @@ export function computePLOutputs(
   const commercialSalesArr = getActiveRow(plAssumptions.commercialSales, s);
   const gAndAArr = getActiveRow(plAssumptions.gAndA, s);
   const rAndDArr = getActiveRow(plAssumptions.rAndD, s);
+  // Expanded OpEx categories (Change 3)
+  const operationsArr = plAssumptions.operations ? getActiveRow(plAssumptions.operations, s) : createPeriodArray(0, NP);
+  const qualityArr = plAssumptions.quality ? getActiveRow(plAssumptions.quality, s) : createPeriodArray(0, NP);
+  const clinicalArr = plAssumptions.clinical ? getActiveRow(plAssumptions.clinical, s) : createPeriodArray(0, NP);
+  const regulatoryArr = plAssumptions.regulatory ? getActiveRow(plAssumptions.regulatory, s) : createPeriodArray(0, NP);
+  const pharmacovigilanceArr = plAssumptions.pharmacovigilance ? getActiveRow(plAssumptions.pharmacovigilance, s) : createPeriodArray(0, NP);
+  const patentsArr = plAssumptions.patents ? getActiveRow(plAssumptions.patents, s) : createPeriodArray(0, NP);
 
   const commercialSales = createPeriodArray(0, NP);
   const gAndA = createPeriodArray(0, NP);
   const rAndD = createPeriodArray(0, NP);
+  const operations = createPeriodArray(0, NP);
+  const quality = createPeriodArray(0, NP);
+  const clinical = createPeriodArray(0, NP);
+  const regulatory = createPeriodArray(0, NP);
+  const pharmacovigilance = createPeriodArray(0, NP);
+  const patents = createPeriodArray(0, NP);
   const totalOpEx = createPeriodArray(0, NP);
 
   for (let i = 0; i < NP; i++) {
@@ -526,7 +555,17 @@ export function computePLOutputs(
     commercialSales[i] = safeNumber(-Math.abs(commercialSalesArr[i]));
     gAndA[i] = safeNumber(-Math.abs(gAndAArr[i]));
     rAndD[i] = safeNumber(-Math.abs(rAndDArr[i]));
-    totalOpEx[i] = safeNumber(commercialSales[i] + gAndA[i] + rAndD[i]);
+    operations[i] = safeNumber(-Math.abs(operationsArr[i]));
+    quality[i] = safeNumber(-Math.abs(qualityArr[i]));
+    clinical[i] = safeNumber(-Math.abs(clinicalArr[i]));
+    regulatory[i] = safeNumber(-Math.abs(regulatoryArr[i]));
+    pharmacovigilance[i] = safeNumber(-Math.abs(pharmacovigilanceArr[i]));
+    patents[i] = safeNumber(-Math.abs(patentsArr[i]));
+    totalOpEx[i] = safeNumber(
+      commercialSales[i] + gAndA[i] + rAndD[i] +
+      operations[i] + quality[i] + clinical[i] +
+      regulatory[i] + pharmacovigilance[i] + patents[i]
+    );
   }
 
   // ---- EBITDA ----
@@ -619,6 +658,12 @@ export function computePLOutputs(
     commercialSales,
     gAndA,
     rAndD,
+    operations,
+    quality,
+    clinical,
+    regulatory,
+    pharmacovigilance,
+    patents,
     totalOpEx,
     ebitda,
     ebitdaMargin,

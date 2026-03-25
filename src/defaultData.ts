@@ -194,8 +194,9 @@ export function createDefaultConfig(): ModelConfig {
     unitType: 'standard_units',
     activeScenario: 2,
     scenarioMode: 'three_scenario',
+    useGlobalCountry: false,
     unitsPerGramOfAPI: 25,       // 25 finished units per gram of API (equiv. ~40mg per unit)
-    manufacturingOverage: 0.15,
+    manufacturingOverage: 0,     // deprecated — no longer used in calculations
     apiPricingModel: 'percentage',
     apiCostPerGram: 5,              // €5 per gram of API (matches seed data price levels)
     cogsInflationRate: 0.025,       // 2.5% annual COGS inflation
@@ -208,7 +209,7 @@ export function createDefaultConfig(): ModelConfig {
     terminalValueEnabled: false,
     terminalValueGrowthRate: -0.02,  // -2% decline (conservative for biosimilars)
     partnerViewEnabled: false,
-    modelVersion: 21,  // Must match CURRENT_MODEL_VERSION in migrate.ts
+    modelVersion: 22,  // Must match CURRENT_MODEL_VERSION in migrate.ts
   };
 }
 
@@ -321,6 +322,16 @@ export function createDefaultCountry(
     biosimilarLaunchPeriodIndex: loeIndex, // default: launches at LOE
     biosimilarPricePct: scenarioRowFrom(bioPriceBear, bioPriceBase, bioPriceBull),
     biosimilarMarketShare: scenarioRowFrom(bioShareBear, bioShareBase, bioShareBull),
+    biosimilarPenetration: scenarioRowFrom(
+      loePct(0, [15, 25, 35, 40, 45, 50, 55, 58, 60, 62, 65]),
+      loePct(0, [20, 30, 40, 45, 50, 55, 60, 63, 65, 67, 70]),
+      loePct(0, [25, 35, 45, 50, 55, 60, 65, 68, 70, 72, 75]),
+    ),
+    ourShareOfBiosimilar: scenarioRowFrom(
+      loePct(0, [30, 35, 35, 35, 33, 32, 31, 31, 30, 30, 30]),
+      loePct(0, [35, 40, 38, 36, 34, 33, 32, 31, 30, 30, 28]),
+      loePct(0, [40, 45, 42, 40, 38, 36, 34, 33, 32, 31, 30]),
+    ),
 
     partnerGtnPct: scenarioRowFrom(partnerGtnBear, partnerGtnBase, partnerGtnBull),
     supplyPricePct: scenarioRowFrom(supplyPriceBear, supplyPriceBase, supplyPriceBull),
@@ -342,6 +353,24 @@ export function createDefaultCountry(
     partnerManufacturingCosts: createPeriodArray(0, numPeriods),
     partnerGAndA: createPeriodArray(0, numPeriods),
     partnerTaxRate: 0.25,
+  };
+}
+
+// ---- Global Country Factory (Change 1) ----
+
+export function createGlobalCountry(
+  numPeriods: number,
+  startYear: number,
+  loeYear: number,
+  currency = '€',
+): CountryAssumptions {
+  const base = createDefaultCountry('Global', numPeriods, 0, startYear, loeYear);
+  // Override: local currency matches model currency, FX always 1.0
+  const currencyCode = currency === '€' ? 'EUR' : currency === '$' ? 'USD' : currency === '£' ? 'GBP' : currency === '¥' ? 'JPY' : 'EUR';
+  return {
+    ...base,
+    localCurrency: currencyCode,
+    fxRate: createPeriodArray(1.0, numPeriods),
   };
 }
 
@@ -387,6 +416,13 @@ export function createDefaultPLAssumptions(numPeriods = DEFAULT_NUM_PERIODS): PL
     taxRate: scenarioRowFrom(taxBear, taxBase, taxBull),
     financialCosts: scenarioRowFrom([...finCostZero], [...finCostZero], [...finCostZero]),
     otherIncome: scenarioRowFrom([...otherIncZero], [...otherIncZero], [...otherIncZero]),
+    // Expanded OpEx categories (Change 3)
+    operations: createScenarioRow(0, numPeriods),
+    quality: createScenarioRow(0, numPeriods),
+    clinical: createScenarioRow(0, numPeriods),
+    regulatory: createScenarioRow(0, numPeriods),
+    pharmacovigilance: createScenarioRow(0, numPeriods),
+    patents: createScenarioRow(0, numPeriods),
   };
 }
 

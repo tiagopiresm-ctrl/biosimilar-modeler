@@ -118,9 +118,12 @@ export interface ModelConfig {
   unitType: UnitType;
   activeScenario: Scenario;
   scenarioMode: ScenarioMode;
+  // Global country option
+  useGlobalCountry: boolean;       // when true, single "Global" country replaces all
   // API Economics (global, independent of country)
   unitsPerGramOfAPI: number;       // how many finished units 1 gram of API produces
-  manufacturingOverage: number;    // % overage (decimal, e.g. 0.15 = 15%)
+  /** @deprecated No longer used in calculations — kept for export compatibility */
+  manufacturingOverage: number;    // % overage (decimal) — deprecated, always 0
   apiPricingModel: ApiPricingModel; // 'percentage' or 'fixed'
   apiCostPerGram: number;          // cost per gram of API (model currency, e.g. €180)
   cogsInflationRate: number;       // annual COGS inflation rate (decimal, e.g. 0.025 = 2.5%)
@@ -158,6 +161,13 @@ export interface PLAssumptions {
   taxRate: ScenarioRow;          // % (decimal)
   financialCosts: ScenarioRow;   // currency'000 absolute (interest, bank fees, etc.)
   otherIncome: ScenarioRow;      // currency'000 absolute (non-product income)
+  // Expanded OpEx categories
+  operations: ScenarioRow;       // currency'000 absolute
+  quality: ScenarioRow;          // currency'000 absolute
+  clinical: ScenarioRow;         // currency'000 absolute
+  regulatory: ScenarioRow;       // currency'000 absolute
+  pharmacovigilance: ScenarioRow; // currency'000 absolute
+  patents: ScenarioRow;          // currency'000 absolute
 }
 
 // ---- PER-COUNTRY ASSUMPTIONS ----
@@ -187,7 +197,11 @@ export interface CountryAssumptions {
   // Biosimilar assumptions
   biosimilarLaunchPeriodIndex: number;   // period index when biosimilar launches (default: 5 = LOE)
   biosimilarPricePct: ScenarioRow;       // % of originator (in-market price, decimal)
-  biosimilarMarketShare: ScenarioRow;    // % of total market (decimal)
+  /** @deprecated Use biosimilarPenetration + ourShareOfBiosimilar instead */
+  biosimilarMarketShare: ScenarioRow;    // % of total market (decimal) — kept for backward compat
+  // Simplified market share (Change 4)
+  biosimilarPenetration: ScenarioRow;    // total biosimilar share of molecule market (decimal, 0-1)
+  ourShareOfBiosimilar: ScenarioRow;     // our company's share of the biosimilar segment (decimal, 0-1)
   // Partner economics
   partnerGtnPct: ScenarioRow;            // Partner Gross-to-Net % (decimal)
   supplyPricePct: ScenarioRow;           // % of partner NET selling price (decimal, Mode 1)
@@ -249,18 +263,20 @@ export interface CountryOutputs {
   marketVolume: PeriodArray;          // units
   marketVolumeYoY: PeriodArray;       // % (decimal)
   originatorRefPrice: PeriodArray;    // currency/unit
-  // B. Originator (DERIVED: 100% - sum(generics) - biosimilar)
+  // B. Originator (DERIVED: 100% - biosimilar penetration)
   originatorShare: PeriodArray;       // % (decimal, derived)
   originatorVolume: PeriodArray;      // units
   originatorSales: PeriodArray;       // currency'000
-  // C. Individual Generics
+  // C. Individual Generics (legacy — kept for backward compat)
   genericOutputs: GenericOutputs[];
   totalGenericShare: PeriodArray;     // % (decimal, sum of individual)
   totalGenericVolume: PeriodArray;    // units
   totalGenericSales: PeriodArray;     // currency'000
-  // D. Biosimilar
-  biosimilarShare: PeriodArray;       // % (decimal)
-  biosimilarVolume: PeriodArray;      // units
+  // D. Biosimilar (simplified model: biosimilarVolume = OUR volume)
+  totalBiosimilarVolume: PeriodArray; // total biosimilar market volume
+  ourShareOfBiosimilarArr: PeriodArray; // our share of biosimilar segment (for display)
+  biosimilarShare: PeriodArray;       // % (decimal) — our share of total market
+  biosimilarVolume: PeriodArray;      // OUR volume (units)
   biosimilarInMarketPrice: PeriodArray; // currency/unit
   biosimilarInMarketSales: PeriodArray; // currency'000
   // D1. Partner Economics
@@ -295,6 +311,12 @@ export interface PLOutputs {
   commercialSales: PeriodArray;
   gAndA: PeriodArray;
   rAndD: PeriodArray;
+  operations: PeriodArray;
+  quality: PeriodArray;
+  clinical: PeriodArray;
+  regulatory: PeriodArray;
+  pharmacovigilance: PeriodArray;
+  patents: PeriodArray;
   totalOpEx: PeriodArray;
   ebitda: PeriodArray;
   ebitdaMargin: PeriodArray;

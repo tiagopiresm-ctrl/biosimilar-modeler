@@ -5,7 +5,6 @@ import { EditableCell, FormulaCell } from './EditableCell';
 import {
   computePeriodConfig,
   generatePeriodLabels,
-  getCountryLoeIndex,
   type Scenario,
   SCENARIO_LABELS,
   VOLUME_MULTIPLIER_LABELS,
@@ -14,7 +13,7 @@ import {
   UNIT_TYPE_LABELS,
 } from '../types';
 import type { ScenarioRow, CountryAssumptions, ScenarioMode } from '../types';
-import { ChevronDown, ChevronRight, Beaker, Globe } from 'lucide-react';
+import { Beaker, Globe } from 'lucide-react';
 import { getActiveRow } from '../calculations';
 import { createScenarioRow } from '../defaultData';
 import { ATC_CODES } from '../atcCodes';
@@ -405,97 +404,14 @@ function FormulaRow({
   );
 }
 
-// ────────────────────────────────────────────────────────────
-// Individual Generic Competitor Card
-// ────────────────────────────────────────────────────────────
-
-function GenericCompetitorCard({
-  countryIndex,
-  genericIndex,
-}: {
-  countryIndex: number;
-  genericIndex: number;
-}) {
-  const { countries, config, updateGenericCompetitor } = useStore();
-  const country = countries[countryIndex];
-  const generic = country?.genericCompetitors[genericIndex];
-  const [collapsed, setCollapsed] = useState(false);
-
-  if (!generic) return null;
-
-  const pc = computePeriodConfig(config);
-  const periodLabels = generatePeriodLabels(pc);
-  const headers = periodYears(config);
-  const countryLoeIdx = getCountryLoeIndex(country, pc.startYear);
-  const launchLabel = genericIndex < (country.numGenericsAtLOE)
-    ? 'LOE'
-    : generic.launchPeriodIndex === countryLoeIdx + 1
-      ? 'LOE+1'
-      : generic.launchPeriodIndex === countryLoeIdx + 2
-        ? 'LOE+2'
-        : generic.launchPeriodIndex === countryLoeIdx + 3
-          ? 'LOE+3'
-          : periodLabels[generic.launchPeriodIndex] ?? `Period ${generic.launchPeriodIndex}`;
-
-  return (
-    <div className="border border-gray-200 rounded-lg mb-3 overflow-hidden">
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-      >
-        {collapsed ? (
-          <ChevronRight size={14} className="text-gray-400" />
-        ) : (
-          <ChevronDown size={14} className="text-gray-400" />
-        )}
-        <span className="text-xs font-semibold text-gray-700">
-          {generic.name}
-        </span>
-        <span className="text-[10px] text-gray-400 ml-auto">
-          Launch: {launchLabel}
-        </span>
-      </button>
-
-      {!collapsed && (
-        <div className="p-3 space-y-1">
-          <ScenarioGrid
-            label="Market Share (%)"
-            row={maskBeforePeriod(generic.marketShare, generic.launchPeriodIndex)}
-            activeScenario={config.activeScenario}
-            scenarioMode={config.scenarioMode}
-            format="percent"
-            decimals={1}
-            headers={headers}
-            onCellChange={(sk, pi, v) =>
-              updateGenericCompetitor(countryIndex, genericIndex, 'marketShare', sk, pi, v)
-            }
-            disabledBefore={generic.launchPeriodIndex}
-          />
-          <ScenarioGrid
-            label="Price (% of Originator)"
-            row={maskBeforePeriod(generic.pricePct, generic.launchPeriodIndex)}
-            activeScenario={config.activeScenario}
-            scenarioMode={config.scenarioMode}
-            format="percent"
-            decimals={1}
-            headers={headers}
-            onCellChange={(sk, pi, v) =>
-              updateGenericCompetitor(countryIndex, genericIndex, 'pricePct', sk, pi, v)
-            }
-            disabledBefore={generic.launchPeriodIndex}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
+// Generic Competitor Card removed (Change 4 — simplified market share)
 
 // ────────────────────────────────────────────────────────────
 // P&L Assumptions Section
 // ────────────────────────────────────────────────────────────
 
 interface PLFieldDef {
-  key: 'commercialSales' | 'gAndA' | 'rAndD' | 'dAndA' | 'taxRate';
+  key: 'commercialSales' | 'gAndA' | 'rAndD' | 'dAndA' | 'taxRate' | 'operations' | 'quality' | 'clinical' | 'regulatory' | 'pharmacovigilance' | 'patents';
   label: string;
   format: 'percent' | 'number' | 'currency';
   decimals: number;
@@ -505,6 +421,12 @@ const PL_SCENARIO_FIELDS: PLFieldDef[] = [
   { key: 'commercialSales', label: "Commercial & Sales (currency'000)", format: 'number', decimals: 0 },
   { key: 'gAndA', label: "G&A (currency'000)", format: 'number', decimals: 0 },
   { key: 'rAndD', label: "R&D (currency'000)", format: 'number', decimals: 0 },
+  { key: 'operations', label: "Operations (currency'000)", format: 'number', decimals: 0 },
+  { key: 'quality', label: "Quality (currency'000)", format: 'number', decimals: 0 },
+  { key: 'clinical', label: "Clinical (currency'000)", format: 'number', decimals: 0 },
+  { key: 'regulatory', label: "Regulatory (currency'000)", format: 'number', decimals: 0 },
+  { key: 'pharmacovigilance', label: "Pharmacovigilance (currency'000)", format: 'number', decimals: 0 },
+  { key: 'patents', label: "Patents (currency'000)", format: 'number', decimals: 0 },
   { key: 'dAndA', label: "D&A (currency'000)", format: 'number', decimals: 0 },
   { key: 'taxRate', label: 'Tax Rate (%)', format: 'percent', decimals: 1 },
 ];
@@ -584,7 +506,8 @@ const COUNTRY_FIELDS_BIOSIMILAR: Array<{
   decimals: number;
 }> = [
   { key: 'biosimilarPricePct', label: 'Biosimilar In-Market Price (% of Originator)', format: 'percent', decimals: 1 },
-  { key: 'biosimilarMarketShare', label: 'Biosimilar Market Share (%)', format: 'percent', decimals: 1 },
+  { key: 'biosimilarPenetration', label: 'Total Biosimilar Penetration (% of Molecule Market)', format: 'percent', decimals: 1 },
+  { key: 'ourShareOfBiosimilar', label: 'Our Share of Biosimilar Segment (%)', format: 'percent', decimals: 1 },
 ];
 
 const COUNTRY_FIELDS_PARTNER: Array<{
@@ -629,17 +552,11 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
 
   // Compute derived originator share for display (respects launch gating)
   const derivedOriginatorShare = Array.from({ length: pc.numPeriods }, (_, i) => {
-    let totalGenericShare = 0;
-    for (const gen of country.genericCompetitors) {
-      if (i >= gen.launchPeriodIndex) {
-        totalGenericShare += getActiveRow(gen.marketShare, s)[i];
-      }
-    }
-    // Biosimilar share is zero before its launch period
-    const biosimilarShare = i >= country.biosimilarLaunchPeriodIndex
-      ? getActiveRow(country.biosimilarMarketShare, s)[i]
+    // Biosimilar penetration (total biosimilar share of molecule market)
+    const biosimilarPen = i >= country.biosimilarLaunchPeriodIndex
+      ? (country.biosimilarPenetration ? getActiveRow(country.biosimilarPenetration, s)[i] : 0)
       : 0;
-    return Math.max(0, 1 - totalGenericShare - biosimilarShare);
+    return Math.max(0, 1 - biosimilarPen);
   });
 
   const inputClass =
@@ -735,6 +652,9 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
       {/* Layout depends on global config.volumeForecastMethod */}
       {(() => {
         const forecastStart = config.forecastStartYear - pc.startYear;
+        // Change 2: When no historical years, allow first year to be editable (seed value)
+        const noHistorical = config.modelStartYear === config.forecastStartYear;
+        const volumeDisabledFrom = noHistorical ? 1 : forecastStart; // first cell editable when no historical
         const volumeAdjustmentArr = getActiveRow(country.volumeAdjustment, config.activeScenario);
 
         if (config.volumeForecastMethod === 'atcShare') {
@@ -809,7 +729,7 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
                 headers={headers}
                 onCellChange={(pi, v) => updateCountryAssumption(countryIndex, 'atcClassVolume', 'base', pi, v)}
                 rowLabel="ATC Volume"
-                disabledFrom={forecastStart}
+                disabledFrom={volumeDisabledFrom}
                 forecastStartIndex={forecastStart}
               />
 
@@ -838,7 +758,7 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
                 headers={headers}
                 onCellChange={(pi, v) => updateCountryAssumption(countryIndex, 'marketVolume', 'base', pi, v)}
                 rowLabel="Mol. Volume"
-                disabledFrom={forecastStart}
+                disabledFrom={volumeDisabledFrom}
                 forecastStartIndex={forecastStart}
               />
 
@@ -880,7 +800,7 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
                 headers={headers}
                 onCellChange={(pi, v) => updateCountryAssumption(countryIndex, 'marketVolume', 'base', pi, v)}
                 rowLabel="Mol. Volume"
-                disabledFrom={forecastStart}
+                disabledFrom={volumeDisabledFrom}
                 forecastStartIndex={forecastStart}
               />
 
@@ -904,38 +824,19 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
         }
       })()}
 
-      {/* Generic Competitor Counts */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-5">
-        <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
-          Generic Competitor Entry Timing
-        </h4>
+      {/* Generic Competitor Counts — hidden in simplified model */}
+      <div className="hidden">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-[11px] font-medium text-gray-500 mb-1">
-              Generics at LOE
-            </label>
             <input
-              type="number"
-              min={0}
+              type="hidden"
               value={country.numGenericsAtLOE}
-              onChange={(e) =>
-                handleGenericCountChange('numGenericsAtLOE', parseInt(e.target.value) || 0)
-              }
-              className={inputClass}
             />
           </div>
           <div>
-            <label className="block text-[11px] font-medium text-gray-500 mb-1">
-              Total Generics at LOE+1
-            </label>
             <input
-              type="number"
-              min={0}
+              type="hidden"
               value={country.numGenericsAtY1}
-              onChange={(e) =>
-                handleGenericCountChange('numGenericsAtY1', parseInt(e.target.value) || 0)
-              }
-              className={inputClass}
             />
           </div>
           <div>
@@ -977,11 +878,13 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
       {/* Originator Price — historical editable, forecast computed from growth */}
       {(() => {
         const forecastStart = config.forecastStartYear - pc.startYear;
+        const noHistorical = config.modelStartYear === config.forecastStartYear;
+        const priceDisabledFrom = noHistorical ? 1 : forecastStart;
         // Compute full originator ref price: historical = direct input, forecast = compound growth
         const originatorPriceGrowthArr = getActiveRow(country.originatorPriceGrowth, config.activeScenario);
         const computedOriginatorPrice: number[] = new Array(pc.numPeriods).fill(0);
         for (let i = 0; i < pc.numPeriods; i++) {
-          if (i < forecastStart) {
+          if (i < forecastStart || (noHistorical && i === 0)) {
             computedOriginatorPrice[i] = country.originatorPrice[i] ?? 0;
           } else {
             const prev = i === 0 ? 0 : computedOriginatorPrice[i - 1];
@@ -997,7 +900,7 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
             headers={headers}
             onCellChange={(pi, v) => updateCountryAssumption(countryIndex, 'originatorPrice', 'base', pi, v)}
             rowLabel="Orig. Price"
-            disabledFrom={forecastStart}
+            disabledFrom={priceDisabledFrom}
             forecastStartIndex={forecastStart}
           />
         );
@@ -1024,25 +927,9 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
         );
       })}
 
-      {/* Individual Generic Competitors */}
-      {country.genericCompetitors.length > 0 && (
-        <div className="mb-5">
-          <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
-            Individual Generic Competitors
-          </h4>
-          {country.genericCompetitors.map((_, gi) => (
-            <GenericCompetitorCard
-              key={gi}
-              countryIndex={countryIndex}
-              genericIndex={gi}
-            />
-          ))}
-        </div>
-      )}
-
       {/* Derived Originator Share */}
       <FormulaRow
-        label="Originator Market Share (%) — Derived: 100% - Generics - Biosimilar"
+        label="Originator Market Share (%) — Derived: 100% - Biosimilar Penetration"
         values={derivedOriginatorShare}
         format="percent"
         decimals={1}
@@ -1410,10 +1297,7 @@ export function AssumptionsPage() {
             <span className="text-[10px] text-gray-400 block">{UNIT_TYPE_LABELS[config.unitType]} per Gram of API</span>
             <span className="text-sm font-medium text-gray-800">{config.unitsPerGramOfAPI}</span>
           </div>
-          <div>
-            <span className="text-[10px] text-gray-400 block">Manufacturing Overage</span>
-            <span className="text-sm font-medium text-gray-800">{(config.manufacturingOverage * 100).toFixed(1)}%</span>
-          </div>
+          {/* Manufacturing Overage removed (Change 5) */}
           <div>
             <span className="text-[10px] text-gray-400 block">Pricing Model</span>
             <span className="text-sm font-medium text-gray-800">{API_PRICING_MODEL_LABELS[config.apiPricingModel]}</span>

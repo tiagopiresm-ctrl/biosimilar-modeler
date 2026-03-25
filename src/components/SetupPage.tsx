@@ -258,6 +258,27 @@ export function SetupPage() {
                 : 'Full Worst / Base / Best analysis'}
             </p>
           </div>
+          {/* Global Country Toggle (Change 1) */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Region Mode
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer mt-2">
+              <input
+                type="checkbox"
+                checked={config.useGlobalCountry ?? false}
+                onChange={(e) => updateConfig('useGlobalCountry', e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Use Global (single region)</span>
+            </label>
+            <p className="text-[10px] text-gray-400 mt-1">
+              {config.useGlobalCountry
+                ? 'Single "Global" country with FX=1.0'
+                : 'Individual countries with per-country FX rates'}
+            </p>
+          </div>
+
           {/* Partner View Toggle */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -315,26 +336,6 @@ export function SetupPage() {
             <p className="text-[10px] text-gray-400 mt-1">
               How many finished standard units (tablets/vials) 1 gram of API produces
             </p>
-          </div>
-
-          {/* Manufacturing Overage */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Manufacturing Overage (%)
-            </label>
-            <input
-              type="number"
-              value={(config.manufacturingOverage * 100).toFixed(1)}
-              onChange={(e) =>
-                updateConfig(
-                  'manufacturingOverage',
-                  (parseFloat(e.target.value) || 0) / 100,
-                )
-              }
-              min={0}
-              step={0.5}
-              className={inputClass}
-            />
           </div>
 
           {/* API Cost per Gram */}

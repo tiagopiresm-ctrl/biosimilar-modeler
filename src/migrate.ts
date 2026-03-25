@@ -19,7 +19,7 @@ import { resizeModelState } from './periodResize';
 import { COUNTRY_CURRENCY_MAP } from './ecbFxData';
 
 /** Single source of truth for the current model version. */
-export const CURRENT_MODEL_VERSION = 21;
+export const CURRENT_MODEL_VERSION = 22;
 
 // ---- Validation ----
 
@@ -386,6 +386,37 @@ export function migrateState(persisted: unknown, fromVersion: number): ModelStat
       partnerManufacturingCosts: (c as any).partnerManufacturingCosts ?? createPeriodArray(0, pc.numPeriods),
       partnerGAndA: (c as any).partnerGAndA ?? createPeriodArray(0, pc.numPeriods),
       partnerTaxRate: (c as any).partnerTaxRate ?? 0.25,
+    }));
+  }
+
+  // Migrate from v21 to v22: expanded OpEx, simplified market share, global country, remove manufacturingOverage
+  if (fromVersion < 22) {
+    const pc = computePeriodConfig(state.config);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg22 = state.config as any;
+    // Add useGlobalCountry
+    cfg22.useGlobalCountry = cfg22.useGlobalCountry ?? false;
+    // Remove manufacturingOverage
+    delete cfg22.manufacturingOverage;
+    cfg22.modelVersion = 22;
+    state.config = { ...cfg22 };
+
+    // Add expanded OpEx fields to PLAssumptions
+    state.plAssumptions = {
+      ...state.plAssumptions,
+      operations: (state.plAssumptions as any).operations ?? createScenarioRow(0, pc.numPeriods),
+      quality: (state.plAssumptions as any).quality ?? createScenarioRow(0, pc.numPeriods),
+      clinical: (state.plAssumptions as any).clinical ?? createScenarioRow(0, pc.numPeriods),
+      regulatory: (state.plAssumptions as any).regulatory ?? createScenarioRow(0, pc.numPeriods),
+      pharmacovigilance: (state.plAssumptions as any).pharmacovigilance ?? createScenarioRow(0, pc.numPeriods),
+      patents: (state.plAssumptions as any).patents ?? createScenarioRow(0, pc.numPeriods),
+    };
+
+    // Add biosimilarPenetration and ourShareOfBiosimilar to countries
+    state.countries = state.countries.map((c: CountryAssumptions) => ({
+      ...c,
+      biosimilarPenetration: (c as any).biosimilarPenetration ?? createScenarioRow(0, pc.numPeriods),
+      ourShareOfBiosimilar: (c as any).ourShareOfBiosimilar ?? createScenarioRow(0, pc.numPeriods),
     }));
   }
 
