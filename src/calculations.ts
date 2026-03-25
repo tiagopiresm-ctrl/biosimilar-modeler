@@ -776,7 +776,7 @@ export function computeIRR(cashFlows: number[]): number | null {
  */
 function computeIRRBisection(cashFlows: number[]): number | null {
   let lo = -0.99;
-  let hi = 5.0;  // max 500% IRR — reasonable upper bound
+  let hi = 2.0;  // max 200% IRR — reasonable upper bound for biosimilars
   const maxIter = 300;
   const tol = 1e-9;
 
@@ -915,41 +915,52 @@ export function computeNPVOutputs(
   // For risk-adjusted: use last period's PoS
   const riskAdjTV = discountedTerminalValue * (cumulativePoS[NP - 1] ?? 1);
   const rnpvWithTV = rnpv + riskAdjTV;
-  const irr = computeIRR(fcf);
-  const rirr = computeIRR(riskAdjustedFCF);
+  // IRR: compute from LOE onwards (pre-launch cash flows distort IRR)
+  // Include one period before LOE to capture the investment outflow
+  const irrStartIdx = Math.max(0, loeIdx - 1);
+  const irr = computeIRR(fcf.slice(irrStartIdx));
+  const rirr = computeIRR(riskAdjustedFCF.slice(irrStartIdx));
   const moneyAtRisk = Math.min(...cumulativeFCF);
   const fundingNeed = Math.min(...fcf);
 
+  // Payback undiscounted: first year FROM LAUNCH where cumulative FCF > 0
+  // We re-compute cumulative FCF from LOE to ignore pre-launch milestone cash
   let paybackUndiscounted: number | null = null;
-  for (let i = 0; i < NP; i++) {
-    if (cumulativeFCF[i] > 0) {
+  let cumFCFFromLaunch = 0;
+  for (let i = loeIdx; i < NP; i++) {
+    cumFCFFromLaunch += fcf[i];
+    if (cumFCFFromLaunch > 0) {
       paybackUndiscounted = pc.startYear + i;
       break;
     }
   }
 
+  // Payback discounted: first year FROM LAUNCH where cumulative discounted FCF > 0
   let paybackDiscounted: number | null = null;
-  for (let i = 0; i < NP; i++) {
-    if (cumulativeDiscountedFCF[i] > 0) {
+  let cumDFCFFromLaunch = 0;
+  for (let i = loeIdx; i < NP; i++) {
+    cumDFCFFromLaunch += discountedFCF[i];
+    if (cumDFCFFromLaunch > 0) {
       paybackDiscounted = pc.startYear + i;
       break;
     }
   }
 
+  // Break-even year: first year FROM LAUNCH where product FCF (excl milestones pre-launch) > 0
   let breakEvenYear: number | null = null;
-  for (let i = 0; i < NP; i++) {
+  for (let i = loeIdx; i < NP; i++) {
     if (fcf[i] > 0) {
       breakEvenYear = pc.startYear + i;
       break;
     }
   }
 
-  // Breakeven from launch: years from earliest LOE to first positive cumulative FCF
+  // Breakeven from launch: years from earliest LOE to payback
   const loeCalendarYear = pc.startYear + loeIdx;
   const breakEvenFromLaunchYears: number | null =
     paybackUndiscounted !== null ? paybackUndiscounted - loeCalendarYear : null;
 
-  // Discounted payback from launch: years from earliest LOE to cumulative discounted FCF > 0
+  // Discounted payback from launch: years from earliest LOE to discounted payback
   const discountedPaybackYears: number | null =
     paybackDiscounted !== null ? paybackDiscounted - loeCalendarYear : null;
 
