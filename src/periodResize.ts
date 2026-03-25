@@ -142,7 +142,9 @@ export function resizeFCFBridge(
   newPc: PeriodConfig,
 ): FCFBridgeInputs {
   return {
-    workingCapitalChange: resizePeriodArray(fb.workingCapitalChange, oldPc, newPc, 0),
+    receivableDays: fb.receivableDays ?? 45,
+    payableDays: fb.payableDays ?? 45,
+    inventoryDays: fb.inventoryDays ?? 90,
     capitalExpenditure: resizePeriodArray(fb.capitalExpenditure, oldPc, newPc, 0),
   };
 }

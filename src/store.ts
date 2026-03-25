@@ -15,7 +15,6 @@ import type {
   PLAssumptions,
   WACCInputs,
   DecisionTreeGate,
-  FCFBridgeInputs,
   GenericCompetitor,
 } from './types';
 
@@ -130,8 +129,12 @@ interface StoreActions {
   ) => void;
 
   // FCF Bridge
-  updateFCFBridge: (
-    field: keyof FCFBridgeInputs,
+  updateFCFBridgeDays: (
+    field: 'receivableDays' | 'payableDays' | 'inventoryDays',
+    value: number,
+  ) => void;
+
+  updateFCFBridgeCapex: (
     periodIndex: number,
     value: number,
   ) => void;
@@ -450,16 +453,24 @@ export const useStore = create<ModelState & StoreActions>()(
         }),
 
       // ---- FCF Bridge ----
-      updateFCFBridge: (
-        field: keyof FCFBridgeInputs,
+      updateFCFBridgeDays: (
+        field: 'receivableDays' | 'payableDays' | 'inventoryDays',
+        value: number,
+      ) =>
+        set((state) => {
+          const fcfBridge = { ...state.fcfBridge, [field]: value };
+          return { fcfBridge };
+        }),
+
+      updateFCFBridgeCapex: (
         periodIndex: number,
         value: number,
       ) =>
         set((state) => {
           const fcfBridge = { ...state.fcfBridge };
-          const arr = [...fcfBridge[field]];
+          const arr = [...fcfBridge.capitalExpenditure];
           arr[periodIndex] = value;
-          fcfBridge[field] = arr;
+          fcfBridge.capitalExpenditure = arr;
           return { fcfBridge };
         }),
 

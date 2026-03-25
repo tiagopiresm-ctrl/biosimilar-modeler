@@ -91,9 +91,21 @@ export function addInteractivePLAssumptionsSheet(
   writeSection(ws, row, 'FCF Bridge Inputs', colCount);
   row++;
 
-  writeInputRow(ws, row, 'Working Capital Change', fcfBridge.workingCapitalChange,
-    NP, cellMap, sheetKey, 'workingCapital', NUM_FMT.integer);
-  row++;
+  // Working Capital Days (scalar inputs in column A/B)
+  const daysFields: Array<{ label: string; field: string; value: number }> = [
+    { label: 'Receivable Days', field: 'receivableDays', value: fcfBridge.receivableDays },
+    { label: 'Payable Days', field: 'payableDays', value: fcfBridge.payableDays },
+    { label: 'Inventory Days', field: 'inventoryDays', value: fcfBridge.inventoryDays },
+  ];
+  for (const d of daysFields) {
+    ws.getCell(row, 1).value = d.label;
+    ws.getCell(row, 1).font = { size: 10 };
+    ws.getCell(row, 2).value = d.value;
+    ws.getCell(row, 2).numFmt = NUM_FMT.integer;
+    ws.getCell(row, 2).font = { size: 10, color: { argb: '0000CC' } };
+    cellMap.registerScalar(sheetKey, d.field, 'P&L Assumptions', ws.getCell(row, 2).address);
+    row++;
+  }
 
   writeInputRow(ws, row, 'Capital Expenditure', fcfBridge.capitalExpenditure,
     NP, cellMap, sheetKey, 'capitalExpenditure', NUM_FMT.integer);

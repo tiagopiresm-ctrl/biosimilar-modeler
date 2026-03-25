@@ -432,7 +432,7 @@ const PL_SCENARIO_FIELDS: PLFieldDef[] = [
 ];
 
 function PLAssumptionsSection() {
-  const { plAssumptions, config, fcfBridge, updatePLAssumption, updateFCFBridge } = useStore();
+  const { plAssumptions, config, fcfBridge, updatePLAssumption, updateFCFBridgeDays, updateFCFBridgeCapex } = useStore();
   const headers = periodYears(config);
 
   return (
@@ -458,20 +458,32 @@ function PLAssumptionsSection() {
         ))}
       </div>
 
-      {/* FCF Bridge: Working Capital & CapEx */}
+      {/* FCF Bridge: Working Capital Days & CapEx */}
       <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-6 mb-2">
         Free Cash Flow Bridge
       </h4>
+
+      {/* Working Capital Days inputs */}
+      <div className="mb-3 grid grid-cols-3 gap-4">
+        {([
+          { field: 'receivableDays' as const, label: 'Receivable Days' },
+          { field: 'payableDays' as const, label: 'Payable Days' },
+          { field: 'inventoryDays' as const, label: 'Inventory Days' },
+        ]).map(({ field, label }) => (
+          <div key={field} className="flex items-center gap-2">
+            <label className="text-xs text-gray-600 whitespace-nowrap w-28">{label}</label>
+            <EditableCell
+              value={fcfBridge[field]}
+              onChange={(v) => updateFCFBridgeDays(field, v)}
+              format="number"
+              decimals={0}
+              className="w-20"
+            />
+          </div>
+        ))}
+      </div>
+
       <div className="space-y-1">
-        <SingleRowGrid
-          label={`Working Capital Change (${config.currency}'000)`}
-          values={fcfBridge.workingCapitalChange}
-          format="number"
-          decimals={0}
-          headers={headers}
-          rowLabel="Value"
-          onCellChange={(pi, v) => updateFCFBridge('workingCapitalChange', pi, v)}
-        />
         <SingleRowGrid
           label={`Capital Expenditure (${config.currency}'000)`}
           values={fcfBridge.capitalExpenditure}
@@ -479,7 +491,7 @@ function PLAssumptionsSection() {
           decimals={0}
           headers={headers}
           rowLabel="Value"
-          onCellChange={(pi, v) => updateFCFBridge('capitalExpenditure', pi, v)}
+          onCellChange={(pi, v) => updateFCFBridgeCapex(pi, v)}
         />
       </div>
     </div>

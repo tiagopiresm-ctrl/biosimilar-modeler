@@ -209,7 +209,7 @@ export function createDefaultConfig(): ModelConfig {
     terminalValueEnabled: false,
     terminalValueGrowthRate: -0.02,  // -2% decline (conservative for biosimilars)
     partnerViewEnabled: false,
-    modelVersion: 22,  // Must match CURRENT_MODEL_VERSION in migrate.ts
+    modelVersion: 23,  // Must match CURRENT_MODEL_VERSION in migrate.ts
   };
 }
 
@@ -453,9 +453,12 @@ export function createDefaultDecisionTree(): DecisionTreeGate[] {
 // ---- FCF Bridge Inputs ----
 
 export function createDefaultFCFBridge(numPeriods = DEFAULT_NUM_PERIODS): FCFBridgeInputs {
-  const wcChange = createPeriodArray(0, numPeriods);
-  const capex = createPeriodArray(0, numPeriods);
-  return { workingCapitalChange: wcChange, capitalExpenditure: capex };
+  return {
+    receivableDays: 45,
+    payableDays: 45,
+    inventoryDays: 90,
+    capitalExpenditure: createPeriodArray(0, numPeriods),
+  };
 }
 
 // ---- NPV Risk Adjustment ----

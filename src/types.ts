@@ -239,7 +239,9 @@ export interface DecisionTreeGate {
 
 // ---- FCF BRIDGE INPUTS ----
 export interface FCFBridgeInputs {
-  workingCapitalChange: PeriodArray;   // currency'000
+  receivableDays: number;        // e.g. 45
+  payableDays: number;           // e.g. 45
+  inventoryDays: number;         // e.g. 90
   capitalExpenditure: PeriodArray;     // currency'000 (negative)
 }
 

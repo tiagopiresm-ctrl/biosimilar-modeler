@@ -624,13 +624,39 @@ export function computePLOutputs(
   }
 
   // ---- Free Cash Flow ----
+  // Working Capital Change: automatic calculation from days-based inputs
+  // WC[0] = -(Revenue/365 × recvDays) + (|COGS|/365 × payDays) - (|COGS|/365 × invDays)
+  // WC[i] = -(ΔRevenue/365 × recvDays) + (Δ|COGS|/365 × payDays) - (Δ|COGS|/365 × invDays)
   const workingCapitalChange = createPeriodArray(0, NP);
   const capitalExpenditure = createPeriodArray(0, NP);
   const freeCashFlow = createPeriodArray(0, NP);
   const cumulativeFCF = createPeriodArray(0, NP);
 
+  const recvDays = fcfBridge.receivableDays ?? 0;
+  const payDays = fcfBridge.payableDays ?? 0;
+  const invDays = fcfBridge.inventoryDays ?? 0;
+
   for (let i = 0; i < NP; i++) {
-    workingCapitalChange[i] = safeNumber(fcfBridge.workingCapitalChange[i] ?? 0);
+    // Compute WC change from days
+    const rev = totalNetSupplyRevenue[i];
+    const absCogs = Math.abs(cogs[i]);
+
+    if (i === 0) {
+      // Year 0: full balance build-up
+      workingCapitalChange[i] = safeNumber(
+        -(rev / 365 * recvDays) + (absCogs / 365 * payDays) - (absCogs / 365 * invDays),
+      );
+    } else {
+      // Year 1+: delta-based
+      const prevRev = totalNetSupplyRevenue[i - 1];
+      const prevAbsCogs = Math.abs(cogs[i - 1]);
+      const deltaRev = rev - prevRev;
+      const deltaCogs = absCogs - prevAbsCogs;
+      workingCapitalChange[i] = safeNumber(
+        -(deltaRev / 365 * recvDays) + (deltaCogs / 365 * payDays) - (deltaCogs / 365 * invDays),
+      );
+    }
+
     capitalExpenditure[i] = safeNumber(fcfBridge.capitalExpenditure[i] ?? 0);
 
     // FCF = Net Income - D&A (add back depreciation: subtract the negative D&A)

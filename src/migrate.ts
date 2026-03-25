@@ -19,7 +19,7 @@ import { resizeModelState } from './periodResize';
 import { COUNTRY_CURRENCY_MAP } from './ecbFxData';
 
 /** Single source of truth for the current model version. */
-export const CURRENT_MODEL_VERSION = 22;
+export const CURRENT_MODEL_VERSION = 23;
 
 // ---- Validation ----
 
@@ -418,6 +418,20 @@ export function migrateState(persisted: unknown, fromVersion: number): ModelStat
       biosimilarPenetration: (c as any).biosimilarPenetration ?? createScenarioRow(0, pc.numPeriods),
       ourShareOfBiosimilar: (c as any).ourShareOfBiosimilar ?? createScenarioRow(0, pc.numPeriods),
     }));
+  }
+
+  // Migrate from v22 to v23: convert manual WC PeriodArray to days-based inputs
+  if (fromVersion < 23) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fb = state.fcfBridge as any;
+    // Replace workingCapitalChange array with days-based scalars
+    delete fb.workingCapitalChange;
+    fb.receivableDays = fb.receivableDays ?? 45;
+    fb.payableDays = fb.payableDays ?? 45;
+    fb.inventoryDays = fb.inventoryDays ?? 90;
+    fb.capitalExpenditure = fb.capitalExpenditure ?? createPeriodArray(0, computePeriodConfig(state.config).numPeriods);
+    state.fcfBridge = { ...fb };
+    state.config = { ...state.config, modelVersion: 23 };
   }
 
   return state as ModelState;

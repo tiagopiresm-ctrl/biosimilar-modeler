@@ -95,7 +95,7 @@ export function NPVPage() {
     {
       label: 'Working Capital Change',
       unit: `${config.currency}'000`,
-      data: fcfBridge.workingCapitalChange,
+      data: npvOutputs.wcChange,
       kind: 'formula',
       decimals: 0,
     },
