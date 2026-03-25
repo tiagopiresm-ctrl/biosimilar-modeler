@@ -1,16 +1,14 @@
-// Excel, Live Excel & PowerPoint export buttons for the sidebar
+// Excel & PowerPoint export buttons for the sidebar
 
 import { useState } from 'react';
-import { FileSpreadsheet, Presentation, Table } from 'lucide-react';
+import { FileSpreadsheet, Presentation } from 'lucide-react';
 import { useStore } from '../store';
 import { buildExportContext } from './exportTypes';
-import { exportToExcel } from './exportExcel';
 import { exportToPowerPoint } from './exportPowerPoint';
 import { exportInteractiveExcel } from './interactive/exportInteractiveExcel';
 
 export function ExportButtons() {
   const [excelBusy, setExcelBusy] = useState(false);
-  const [liveBusy, setLiveBusy] = useState(false);
   const [pptxBusy, setPptxBusy] = useState(false);
 
   const handleExcel = async () => {
@@ -18,26 +16,12 @@ export function ExportButtons() {
     try {
       const state = useStore.getState();
       const ctx = buildExportContext(state);
-      await exportToExcel(ctx);
+      await exportInteractiveExcel(ctx);
     } catch (err) {
       console.error('Excel export failed', err);
       alert('Excel export failed — see console for details.');
     } finally {
       setExcelBusy(false);
-    }
-  };
-
-  const handleLiveExcel = async () => {
-    setLiveBusy(true);
-    try {
-      const state = useStore.getState();
-      const ctx = buildExportContext(state);
-      await exportInteractiveExcel(ctx);
-    } catch (err) {
-      console.error('Interactive Excel export failed', err);
-      alert('Interactive Excel export failed — see console for details.');
-    } finally {
-      setLiveBusy(false);
     }
   };
 
@@ -56,36 +40,25 @@ export function ExportButtons() {
   };
 
   return (
-    <div className="space-y-1.5">
+    <div className="flex gap-1.5">
       <button
-        onClick={handleLiveExcel}
-        disabled={liveBusy}
-        className="w-full inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50 transition-colors"
-        title="Interactive Excel with live formulas — editable inputs, auto-recalculating outputs, Power BI ready"
+        onClick={handleExcel}
+        disabled={excelBusy}
+        className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+        title="Interactive Excel with live formulas — editable inputs, auto-recalculating outputs"
       >
-        <Table size={12} />
-        {liveBusy ? 'Generating…' : 'Live Excel (Power BI)'}
+        <FileSpreadsheet size={12} />
+        {excelBusy ? 'Exporting…' : 'Excel'}
       </button>
-      <div className="flex gap-1.5">
-        <button
-          onClick={handleExcel}
-          disabled={excelBusy}
-          className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-          title="Export as static Excel snapshot"
-        >
-          <FileSpreadsheet size={12} />
-          {excelBusy ? 'Exporting…' : 'Excel'}
-        </button>
-        <button
-          onClick={handlePptx}
-          disabled={pptxBusy}
-          className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50 transition-colors"
-          title="Export as PowerPoint presentation"
-        >
-          <Presentation size={12} />
-          {pptxBusy ? 'Exporting…' : 'PowerPoint'}
-        </button>
-      </div>
+      <button
+        onClick={handlePptx}
+        disabled={pptxBusy}
+        className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50 transition-colors"
+        title="Export as PowerPoint presentation"
+      >
+        <Presentation size={12} />
+        {pptxBusy ? 'Exporting…' : 'PowerPoint'}
+      </button>
     </div>
   );
 }

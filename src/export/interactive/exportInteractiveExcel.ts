@@ -22,6 +22,7 @@ import { addInteractiveCountryModelSheets } from './sheets/countryModelSheet';
 import { addInteractivePLSheet } from './sheets/plSheet';
 import { addInteractiveNPVSheet } from './sheets/npvSheet';
 import { addInteractiveKPIsSheet } from './sheets/kpisSheet';
+import { addChartsDataSheet } from './sheets/chartsSheet';
 
 // Power BI sheets
 import { addPBIDataSheet } from './sheets/pbiDataSheet';
@@ -52,6 +53,7 @@ export async function exportInteractiveExcel(ctx: ExportContext): Promise<void> 
   addInteractivePLSheet(wb, ctx, cellMap);
   addInteractiveNPVSheet(wb, ctx, cellMap);
   addInteractiveKPIsSheet(wb, ctx, cellMap);
+  addChartsDataSheet(wb, ctx, cellMap);
 
   // ── Phase 3: Power BI sheets ──
   addPBIDataSheet(wb, ctx);

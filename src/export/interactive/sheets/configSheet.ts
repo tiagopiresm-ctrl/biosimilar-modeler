@@ -5,7 +5,7 @@
 import type { Workbook } from 'exceljs';
 import type { ExportContext } from '../../exportTypes';
 import type { CellMap } from '../cellMap';
-import { INPUT_FILL } from '../formulaHelpers';
+import { INPUT_FILL, INPUT_FONT } from '../formulaHelpers';
 import { formulaValue } from '../formulaHelpers';
 import {
   HEADER_FONT, HEADER_FILL, LABEL_FONT, BOLD_VALUE_FONT,
@@ -42,6 +42,7 @@ export function addInteractiveConfigSheet(
     const val = ws.getCell(row, 2);
     val.value = value;
     val.fill = INPUT_FILL;
+    val.font = INPUT_FONT;
     if (numFmt) val.numFmt = numFmt;
   };
 

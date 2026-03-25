@@ -5,9 +5,9 @@
 import type { Workbook } from 'exceljs';
 import type { ExportContext } from '../../exportTypes';
 import type { CellMap } from '../cellMap';
-import { INPUT_FILL, ACTIVE_ROW_FILL, formulaValue, cellAddr } from '../formulaHelpers';
+import { INPUT_FILL, INPUT_FONT, ACTIVE_ROW_FILL, formulaValue, cellAddr } from '../formulaHelpers';
 import {
-  HEADER_FONT, HEADER_FILL, LABEL_FONT, BOLD_VALUE_FONT,
+  HEADER_FONT, HEADER_FILL, BOLD_VALUE_FONT,
   CENTER_ALIGN, THIN_BORDER, NUM_FMT,
   styleSectionRow,
 } from '../../excelStyles';
@@ -64,7 +64,7 @@ export function addInteractiveDecisionTreeSheet(
     // A: Gate name (input)
     const nameCell = ws.getCell(row, 1);
     nameCell.value = gate.name;
-    nameCell.font = LABEL_FONT;
+    nameCell.font = { ...INPUT_FONT };
     nameCell.fill = INPUT_FILL;
 
     // B: Probability (input)
@@ -72,11 +72,12 @@ export function addInteractiveDecisionTreeSheet(
     probCell.value = gate.probability;
     probCell.numFmt = NUM_FMT.percent;
     probCell.fill = INPUT_FILL;
+    probCell.font = INPUT_FONT;
 
     // C: Description (input)
     const descCell = ws.getCell(row, 3);
     descCell.value = gate.description;
-    descCell.font = LABEL_FONT;
+    descCell.font = { ...INPUT_FONT };
     descCell.fill = INPUT_FILL;
 
     // D: Cumulative PoS (formula: PRODUCT of B4:B{row})

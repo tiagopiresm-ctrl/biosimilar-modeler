@@ -2,7 +2,7 @@
 // Formula helper utilities for interactive Excel export
 // ──────────────────────────────────────────────────────────────
 
-import type { Worksheet, Fill, Row } from 'exceljs';
+import type { Worksheet, Fill, Font, Row } from 'exceljs';
 import type { ScenarioRow } from '../../types';
 import type { CellMap } from './cellMap';
 import {
@@ -28,6 +28,13 @@ export const OUTPUT_FILL: Fill = {
   type: 'pattern',
   pattern: 'solid',
   fgColor: { argb: 'FFDCE6F1' }, // light blue-gray
+};
+
+/** Blue font for editable input cells */
+export const INPUT_FONT: Partial<Font> = {
+  name: 'Calibri',
+  size: 10,
+  color: { argb: '0000CC' },
 };
 
 // ── Column / cell address helpers ──
@@ -105,6 +112,7 @@ export function writeScenarioBlock(
       cell.value = arrays[s][p] ?? 0;
       cell.numFmt = numFmt;
       cell.fill = INPUT_FILL;
+      cell.font = INPUT_FONT;
       cellMap.register(sheetKey, `${fieldName}_${s}`, p, ws.name, cellAddr(row, col));
     }
   }
@@ -164,6 +172,7 @@ export function writeBaseOnlyBlock(
     cell.value = activeData[p] ?? 0;
     cell.numFmt = numFmt;
     cell.fill = INPUT_FILL;
+    cell.font = INPUT_FONT;
     // Register as both _active and raw so all formula refs work
     cellMap.register(sheetKey, `${fieldName}_active`, p, ws.name, cellAddr(startRow, col));
     cellMap.register(sheetKey, `${fieldName}_${activeScenarioIdx}`, p, ws.name, cellAddr(startRow, col));
@@ -223,6 +232,7 @@ export function writeInputRow(
     cell.value = data[p] ?? 0;
     cell.numFmt = numFmt;
     cell.fill = INPUT_FILL;
+    cell.font = INPUT_FONT;
     cellMap.register(sheetKey, fieldName, p, ws.name, cellAddr(row, col));
   }
 }

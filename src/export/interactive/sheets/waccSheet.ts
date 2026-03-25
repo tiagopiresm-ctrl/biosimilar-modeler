@@ -6,7 +6,7 @@ import type { Workbook } from 'exceljs';
 import type { ExportContext } from '../../exportTypes';
 import type { CellMap } from '../cellMap';
 import {
-  INPUT_FILL, ACTIVE_ROW_FILL,
+  INPUT_FILL, INPUT_FONT, ACTIVE_ROW_FILL,
   formulaValue, chooseScenario, cellAddr,
 } from '../formulaHelpers';
 import {
@@ -79,6 +79,7 @@ export function addInteractiveWACCSheet(
       cell.value = values[s];
       cell.numFmt = numFmt;
       cell.fill = INPUT_FILL;
+      cell.font = INPUT_FONT;
     }
 
     // Active (CHOOSE)

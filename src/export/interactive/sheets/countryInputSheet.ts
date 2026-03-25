@@ -12,7 +12,7 @@ import type { CellMap } from '../cellMap';
 import type { CountryAssumptions, GenericCompetitor } from '../../../types';
 import { NUM_FMT } from '../../excelStyles';
 import {
-  INPUT_FILL,
+  INPUT_FILL, INPUT_FONT,
   cellAddr,
 
   writeScenarioBlock, writeBaseOnlyBlock, writeInputRow, writeSection,
@@ -44,6 +44,7 @@ function writeScalarRow(
   const valCell = ws.getCell(row, 2);
   valCell.value = value;
   valCell.fill = INPUT_FILL;
+  valCell.font = INPUT_FONT;
   if (numFmt) valCell.numFmt = numFmt;
 
   cellMap.registerScalar(sheetKey, fieldName, ws.name, cellAddr(row, 2));
