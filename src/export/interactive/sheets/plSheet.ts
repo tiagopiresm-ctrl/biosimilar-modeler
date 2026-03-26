@@ -355,17 +355,18 @@ export function addInteractivePLSheet(
   row++;
 
   // Working Capital Change (days-based automatic calculation)
+  // Uses totalRevenue (supply + royalty + milestone) to match the web model
   writeFormulaRow(ws, row, 'Working Capital Change', NP, (p) => {
     const recvDaysRef = cellMap.getScalar('plAssumptions', 'receivableDays').toFormula();
     const payDaysRef = cellMap.getScalar('plAssumptions', 'payableDays').toFormula();
     const invDaysRef = cellMap.getScalar('plAssumptions', 'inventoryDays').toFormula();
-    const rev = cellMap.get(sheetKey, 'totalNetSupplyRevenue', p).toLocal();
+    const rev = cellMap.get(sheetKey, 'totalRevenue', p).toLocal();
     const cogsCurr = cellMap.get(sheetKey, 'cogs', p).toLocal();
     if (p === 0) {
       // Year 0: full balance — WC = -(Rev/365*RecvDays) + (ABS(COGS)/365*PayDays) - (ABS(COGS)/365*InvDays)
       return `-(${rev}/365*${recvDaysRef})+(ABS(${cogsCurr})/365*${payDaysRef})-(ABS(${cogsCurr})/365*${invDaysRef})`;
     }
-    const prevRev = cellMap.get(sheetKey, 'totalNetSupplyRevenue', p - 1).toLocal();
+    const prevRev = cellMap.get(sheetKey, 'totalRevenue', p - 1).toLocal();
     const prevCogs = cellMap.get(sheetKey, 'cogs', p - 1).toLocal();
     // Year 1+: delta-based — WC = -(ΔRev/365*RecvDays) + (Δ|COGS|/365*PayDays) - (Δ|COGS|/365*InvDays)
     return `-((${rev}-${prevRev})/365*${recvDaysRef})+((ABS(${cogsCurr})-ABS(${prevCogs}))/365*${payDaysRef})-((ABS(${cogsCurr})-ABS(${prevCogs}))/365*${invDaysRef})`;

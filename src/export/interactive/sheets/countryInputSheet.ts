@@ -12,8 +12,8 @@ import type { CellMap } from '../cellMap';
 import type { CountryAssumptions, GenericCompetitor } from '../../../types';
 import { NUM_FMT } from '../../excelStyles';
 import {
-  INPUT_FILL, INPUT_FONT,
-  cellAddr,
+  INPUT_FILL, INPUT_FONT, OUTPUT_FILL,
+  cellAddr, periodCol,
 
   writeScenarioBlock, writeBaseOnlyBlock, writeInputRow, writeSection,
   setupSheet, writePeriodHeader, writeColorLegend,
@@ -140,7 +140,29 @@ function buildCountrySheet(
   writeSection(ws, row, 'Market Volume', colCount);
   row++;
 
-  writeInputRow(ws, row, 'Market Volume', country.marketVolume, NP, cellMap, sheetKey, 'marketVolume', NUM_FMT.integer);
+  // Market Volume: historical periods are editable inputs; forecast periods
+  // show cached values with output styling (computed in Model sheet from growth rates).
+  {
+    const forecastStartIdx = ctx.config.forecastStartYear - ctx.periodConfig.startYear;
+    const mvLabel = ws.getCell(row, 1);
+    mvLabel.value = 'Market Volume';
+    mvLabel.font = LABEL_FONT;
+    for (let p = 0; p < NP; p++) {
+      const col = periodCol(p);
+      const cell = ws.getCell(row, col);
+      cell.value = country.marketVolume[p] ?? 0;
+      cell.numFmt = NUM_FMT.integer;
+      if (p < forecastStartIdx || (forecastStartIdx <= 0 && p === 0)) {
+        // Historical: editable input
+        cell.fill = INPUT_FILL;
+        cell.font = INPUT_FONT;
+      } else {
+        // Forecast: display value only (Model sheet is authoritative)
+        cell.fill = OUTPUT_FILL;
+      }
+      cellMap.register(sheetKey, 'marketVolume', p, ws.name, cellAddr(row, col));
+    }
+  }
   row++;
 
   // Volume Adjustment % (scenario block)
@@ -176,7 +198,29 @@ function buildCountrySheet(
   writeSection(ws, row, 'Originator Pricing', colCount);
   row++;
 
-  writeInputRow(ws, row, 'Originator Price', country.originatorPrice, NP, cellMap, sheetKey, 'originatorPrice', NUM_FMT.decimal2);
+  // Originator Price: historical periods are editable inputs; forecast periods
+  // show cached values with output styling (computed in Model sheet from growth rates).
+  {
+    const forecastStartIdx = ctx.config.forecastStartYear - ctx.periodConfig.startYear;
+    const opLabel = ws.getCell(row, 1);
+    opLabel.value = 'Originator Price';
+    opLabel.font = LABEL_FONT;
+    for (let p = 0; p < NP; p++) {
+      const col = periodCol(p);
+      const cell = ws.getCell(row, col);
+      cell.value = country.originatorPrice[p] ?? 0;
+      cell.numFmt = NUM_FMT.decimal2;
+      if (p < forecastStartIdx || (forecastStartIdx <= 0 && p === 0)) {
+        // Historical: editable input
+        cell.fill = INPUT_FILL;
+        cell.font = INPUT_FONT;
+      } else {
+        // Forecast: display value only (Model sheet is authoritative)
+        cell.fill = OUTPUT_FILL;
+      }
+      cellMap.register(sheetKey, 'originatorPrice', p, ws.name, cellAddr(row, col));
+    }
+  }
   row++;
 
   const origGrowth = sb(

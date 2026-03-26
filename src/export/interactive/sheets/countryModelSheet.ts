@@ -306,14 +306,13 @@ function buildCountryModelSheet(
   }, co.partnerNetSales, cellMap, sheetKey, 'partnerNetSales', NUM_FMT.integer);
   row++;
 
-  // 21. API Grams Supplied
+  // 21. API Grams Supplied = Volume / UnitsPerGram (no overage — matches web model)
   const unitsPerGramRef = cellMap.getScalar('config', 'unitsPerGram').toFormula();
-  const mfgOverageRef = cellMap.getScalar('config', 'manufacturingOverage').toFormula();
 
   writeFormulaRow(ws, row, 'API Grams Supplied', NP, (p) => {
     if (p < launchIdx) return '0';
     const vol = cellMap.get(sheetKey, 'biosimilarVolume', p).toLocal();
-    return `(${vol}/${unitsPerGramRef})*(1+${mfgOverageRef})`;
+    return `${vol}/${unitsPerGramRef}`;
   }, co.apiGramsSupplied, cellMap, sheetKey, 'apiGramsSupplied', NUM_FMT.decimal2);
   row++;
 

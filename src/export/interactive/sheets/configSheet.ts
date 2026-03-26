@@ -151,7 +151,7 @@ export function addInteractiveConfigSheet(
   ws.getCell(17, 2).dataValidation = {
     type: 'list',
     allowBlank: false,
-    formulae: ['"API (per gram),Standard Units (per unit)"'],
+    formulae: ['"perGram,perUnit"'],
     showErrorMessage: true,
     errorTitle: 'Invalid',
     error: 'Please select from the dropdown',
@@ -203,15 +203,31 @@ export function addInteractiveConfigSheet(
 
   // Row 28: Volume Multiplier
   writeKV(28, 'Volume Multiplier', config.volumeMultiplier);
+  ws.getCell(28, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"none,thousand,million"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
   // Row 29: blank
 
   // ── Row 30: Terminal Value ──
   section(30, 'Terminal Value');
 
-  // Row 31: Terminal Value Enabled (1=Yes, 0=No)
-  writeKV(31, 'Terminal Value Enabled (1=Yes, 0=No)', config.terminalValueEnabled ? 1 : 0, NUM_FMT.integer);
+  // Row 31: Terminal Value Enabled
+  writeKV(31, 'Terminal Value Enabled', config.terminalValueEnabled ? 'Yes' : 'No');
   cellMap.registerScalar('config', 'terminalValueEnabled', 'Config', 'B31');
+  ws.getCell(31, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"Yes,No"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
   // Row 32: Terminal Value Growth Rate
   writeKV(32, 'Terminal Value Growth Rate', config.terminalValueGrowthRate, NUM_FMT.percent);
@@ -222,13 +238,29 @@ export function addInteractiveConfigSheet(
   // ── Row 34: Partner & Global ──
   section(34, 'Partner & Global');
 
-  // Row 35: Partner View Enabled (1=Yes, 0=No)
-  writeKV(35, 'Partner View Enabled (1=Yes, 0=No)', config.partnerViewEnabled ? 1 : 0, NUM_FMT.integer);
+  // Row 35: Partner View Enabled
+  writeKV(35, 'Partner View Enabled', config.partnerViewEnabled ? 'Yes' : 'No');
   cellMap.registerScalar('config', 'partnerViewEnabled', 'Config', 'B35');
+  ws.getCell(35, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"Yes,No"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
-  // Row 36: Use Global Country (1=Yes, 0=No)
-  writeKV(36, 'Use Global Country (1=Yes, 0=No)', config.useGlobalCountry ? 1 : 0, NUM_FMT.integer);
+  // Row 36: Use Global Country
+  writeKV(36, 'Use Global Country', config.useGlobalCountry ? 'Yes' : 'No');
   cellMap.registerScalar('config', 'useGlobalCountry', 'Config', 'B36');
+  ws.getCell(36, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"Yes,No"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
   // Row 37: blank
 
