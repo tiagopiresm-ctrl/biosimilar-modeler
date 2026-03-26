@@ -341,11 +341,11 @@ export function createDefaultCountry(
     royaltyRatePct: scenarioRowFrom(royBear, royBase, royBull),
     milestonePayments: milestones,
     royaltyTiers: [
-      { threshold: 250000, rate: 0 },
-      { threshold: 750000, rate: 0 },
-      { threshold: 1250000, rate: 0 },
-      { threshold: 1750000, rate: 0 },
-      { threshold: 99999999, rate: 0 },
+      { threshold: 50000, rate: 0.03 },
+      { threshold: 250000, rate: 0.05 },
+      { threshold: 500000, rate: 0.07 },
+      { threshold: 1000000, rate: 0.08 },
+      { threshold: 2000000, rate: 0.10 },
     ],
     useFixedRoyaltyRate: true,  // default to existing flat rate behavior
     // Partner View costs

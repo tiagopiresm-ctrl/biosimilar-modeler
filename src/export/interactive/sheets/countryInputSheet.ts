@@ -332,14 +332,14 @@ function buildCountryInputSheet(
   writeSection(ws, row, 'Royalty Structure', colCount);
   row++;
 
-  // Use Fixed Royalty Rate (dropdown)
-  writeScalarRow(ws, row, 'Use Fixed Royalty Rate',
-    country?.useFixedRoyaltyRate ? 'Yes' : 'No',
+  // Royalty Mode (dropdown)
+  writeScalarRow(ws, row, 'Royalty Mode',
+    country?.useFixedRoyaltyRate ? 'Flat' : 'Tiered',
     cellMap, sheetKey, 'useFixedRoyaltyRate');
   ws.getCell(row, 2).dataValidation = {
     type: 'list',
     allowBlank: false,
-    formulae: ['"Yes,No"'],
+    formulae: ['"Flat,Tiered"'],
     showErrorMessage: true,
     errorTitle: 'Invalid',
     error: 'Please select from the dropdown',

@@ -1098,8 +1098,9 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
           a tiered structure based on cumulative partner net sales in this country.
         </p>
 
-        {/* Toggle: Fixed vs Tiered */}
+        {/* Toggle: Flat Rate vs Tiered */}
         <div className="flex items-center gap-4 mb-4">
+          <span className="text-sm font-medium text-gray-700">Royalty Mode</span>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="radio"
@@ -1108,7 +1109,7 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
               onChange={() => updateCountryUseFixedRoyaltyRate(countryIndex, true)}
               className="accent-blue-600"
             />
-            <span className="text-sm text-gray-700">Fixed Rate (flat %)</span>
+            <span className="text-sm text-gray-700">Flat Rate</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -1118,13 +1119,13 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
               onChange={() => updateCountryUseFixedRoyaltyRate(countryIndex, false)}
               className="accent-blue-600"
             />
-            <span className="text-sm text-gray-700">Tiered (cumulative ratchet)</span>
+            <span className="text-sm text-gray-700">Tiered (cumulative)</span>
           </label>
         </div>
 
         {country.useFixedRoyaltyRate ? (
           <p className="text-xs text-gray-400">
-            Using flat royalty rate from the <em>Royalty Rate %</em> field above.
+            Using the Royalty Rate % from the scenario grid above.
           </p>
         ) : (
           <div>
@@ -1179,6 +1180,9 @@ function CountryTab({ countryIndex }: { countryIndex: number }) {
                 ))}
               </tbody>
             </table>
+            <p className="text-xs text-gray-400 mt-3">
+              Current rates: edit thresholds and rates above. Royalty rate ratchets up as cumulative partner net sales grow.
+            </p>
           </div>
         )}
       </div>
