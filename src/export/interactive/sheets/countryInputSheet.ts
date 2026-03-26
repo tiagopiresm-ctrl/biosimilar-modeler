@@ -1,15 +1,18 @@
 // ──────────────────────────────────────────────────────────────
-// Interactive Excel — Per-country INPUT sheet builder
+// Interactive Excel — Per-country INPUT sheet builder (10 slots)
 // ──────────────────────────────────────────────────────────────
-// Each country gets its own worksheet with editable scenario
-// blocks and per-period input rows. The countryModelSheet will
-// reference these cells via the CellMap to build formulas.
+// Creates 10 input sheets ("C1 Input" ... "C10 Input") regardless
+// of how many countries exist. Slots beyond actual countries are
+// filled with zeros but keep the same structure.
+// The countryModelSheet wraps every formula in
+//   IF(Config!ActiveRef="Yes", formula, 0)
+// so inactive country slots produce zeros everywhere.
 // ──────────────────────────────────────────────────────────────
 
 import type { Workbook, Worksheet } from 'exceljs';
 import type { ExportContext } from '../../exportTypes';
 import type { CellMap } from '../cellMap';
-import type { CountryAssumptions, GenericCompetitor } from '../../../types';
+import type { CountryAssumptions, GenericCompetitor, ScenarioRow } from '../../../types';
 import { NUM_FMT } from '../../excelStyles';
 import {
   INPUT_FILL, INPUT_FONT, OUTPUT_FILL,
@@ -17,14 +20,27 @@ import {
 
   writeScenarioBlock, writeBaseOnlyBlock, writeInputRow, writeSection,
   setupSheet, writePeriodHeader, writeColorLegend,
+  formulaValue,
 } from '../formulaHelpers';
 import { LABEL_FONT, BOLD_VALUE_FONT } from '../../excelStyles';
+import { MAX_COUNTRY_SLOTS } from './configSheet';
 
 // ── Constants ──
 
 const ACTIVE_SCENARIO_REF = 'Config!B5';
 
+/** Sheet name for country input slot (0-based). */
+export function countryInputSheetName(slotIndex: number): string {
+  return `C${slotIndex + 1} Input`;
+}
+
 // ── Helpers ──
+
+/** Create an empty ScenarioRow filled with zeros. */
+function emptyScenarioRow(NP: number): ScenarioRow {
+  const z = Array(NP).fill(0);
+  return { bear: [...z], base: [...z], bull: [...z] };
+}
 
 /** Write a static label + scalar value in column B, register as scalar in cellMap. */
 function writeScalarRow(
@@ -50,39 +66,30 @@ function writeScalarRow(
   cellMap.registerScalar(sheetKey, fieldName, ws.name, cellAddr(row, 2));
 }
 
-/** Write a static label + text value in column B (no cellMap registration). */
-function writeStaticRow(
-  ws: Worksheet,
-  row: number,
-  label: string,
-  value: string | number,
-): void {
-  const labelCell = ws.getCell(row, 1);
-  labelCell.value = label;
-  labelCell.font = LABEL_FONT;
+// ── Main builder for a single country slot ──
 
-  const valCell = ws.getCell(row, 2);
-  valCell.value = value;
-  valCell.font = BOLD_VALUE_FONT;
-}
-
-// ── Main builder ──
-
-function buildCountrySheet(
+function buildCountryInputSheet(
   wb: Workbook,
-  country: CountryAssumptions,
-  countryIndex: number,
+  slotIndex: number,
   ctx: ExportContext,
   cellMap: CellMap,
 ): void {
-  const sheetKey = `country_${countryIndex}`;
-  const sheetName = country.name.slice(0, 31);
+  const sheetKey = `country_${slotIndex}`;
+  const sheetName = countryInputSheetName(slotIndex);
   const ws = wb.addWorksheet(sheetName);
 
   const NP = ctx.periodLabels.length;
   const colCount = NP + 1;
   const activeIdx = ctx.config.activeScenario - 1; // 0-based
   const isBaseOnly = ctx.config.scenarioMode === 'base_only';
+
+  // Actual country data (null if this is an empty slot)
+  const country: CountryAssumptions | null =
+    slotIndex < ctx.countries.length ? ctx.countries[slotIndex] : null;
+
+  // Zero arrays for empty slots
+  const zeroArr = Array(NP).fill(0);
+  const zeroScenario = emptyScenarioRow(NP);
 
   // Conditional scenario writer — uses single row in base-only mode
   const sb: typeof writeScenarioBlock = (...args) =>
@@ -97,26 +104,45 @@ function buildCountrySheet(
 
   let row = 4;
 
+  // ═══════════════════════════════════════════════════════════
+  // Row 4: Title — shows country name or "INACTIVE"
+  // ═══════════════════════════════════════════════════════════
+  {
+    const activeRef = cellMap.getScalar('config', `countryActive_${slotIndex}`).toFormula();
+    const nameRef = cellMap.getScalar('config', `countryName_${slotIndex}`).toFormula();
+    const titleCell = ws.getCell(row, 1);
+    titleCell.value = formulaValue(
+      `IF(${activeRef}="Yes",${nameRef},"INACTIVE")`,
+      country?.name ?? 'INACTIVE',
+    );
+    titleCell.font = { ...BOLD_VALUE_FONT, size: 12 };
+  }
+  row++;
+
+  // blank
+  row++;
+
   // ════════════════════════════════════════════════════════════
   // Section: Country Settings
   // ════════════════════════════════════════════════════════════
   writeSection(ws, row, 'Country Settings', colCount);
   row++;
 
-  // Country Name (static, not in cellMap)
-  writeStaticRow(ws, row, 'Country Name', country.name);
-  row++;
-
-  // Local Currency (static)
-  writeStaticRow(ws, row, 'Local Currency', country.localCurrency);
-  row++;
-
-  // LOE Year (scalar input)
-  writeScalarRow(ws, row, 'LOE Year', country.loeYear, cellMap, sheetKey, 'loeYear', NUM_FMT.year);
-  row++;
-
-  // Biosimilar Launch Period (scalar input)
-  writeScalarRow(ws, row, 'Biosimilar Launch Period', country.biosimilarLaunchPeriodIndex, cellMap, sheetKey, 'biosimLaunchIdx', NUM_FMT.integer);
+  // Biosimilar Launch Period (scalar input — computed from Config launch year)
+  {
+    const launchRef = cellMap.getScalar('config', `countryLaunch_${slotIndex}`).toFormula();
+    const startRef = cellMap.getScalar('config', 'modelStartYear').toFormula();
+    const labelCell = ws.getCell(row, 1);
+    labelCell.value = 'Biosimilar Launch Period Index';
+    labelCell.font = LABEL_FONT;
+    const valCell = ws.getCell(row, 2);
+    valCell.value = formulaValue(
+      `${launchRef}-${startRef}`,
+      country?.biosimilarLaunchPeriodIndex ?? 5,
+    );
+    valCell.font = BOLD_VALUE_FONT;
+    cellMap.registerScalar(sheetKey, 'biosimLaunchIdx', ws.name, cellAddr(row, 2));
+  }
   row++;
 
   // Blank
@@ -128,7 +154,8 @@ function buildCountrySheet(
   writeSection(ws, row, 'FX Rates', colCount);
   row++;
 
-  writeInputRow(ws, row, `FX Rate (local/${ctx.config.currency})`, country.fxRate, NP, cellMap, sheetKey, 'fxRate', NUM_FMT.decimal2);
+  writeInputRow(ws, row, `FX Rate (local/${ctx.config.currency})`,
+    country?.fxRate ?? zeroArr.map(() => 1), NP, cellMap, sheetKey, 'fxRate', NUM_FMT.decimal2);
   row++;
 
   // Blank
@@ -150,7 +177,7 @@ function buildCountrySheet(
     for (let p = 0; p < NP; p++) {
       const col = periodCol(p);
       const cell = ws.getCell(row, col);
-      cell.value = country.marketVolume[p] ?? 0;
+      cell.value = country?.marketVolume[p] ?? 0;
       cell.numFmt = NUM_FMT.integer;
       if (p < forecastStartIdx || (forecastStartIdx <= 0 && p === 0)) {
         // Historical: editable input
@@ -167,7 +194,7 @@ function buildCountrySheet(
 
   // Volume Adjustment % (scenario block)
   const volAdj = sb(
-    ws, row, 'Volume Adjustment %', country.volumeAdjustment,
+    ws, row, 'Volume Adjustment %', country?.volumeAdjustment ?? zeroScenario,
     NP, cellMap, sheetKey, 'volumeAdjustment',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
@@ -175,17 +202,17 @@ function buildCountrySheet(
 
   // ATC-based volume forecasting (conditional)
   if (ctx.config.volumeForecastMethod === 'atcShare') {
-    writeInputRow(ws, row, 'ATC Class Volume', country.atcClassVolume, NP, cellMap, sheetKey, 'atcClassVolume', NUM_FMT.integer);
+    writeInputRow(ws, row, 'ATC Class Volume', country?.atcClassVolume ?? zeroArr, NP, cellMap, sheetKey, 'atcClassVolume', NUM_FMT.integer);
     row++;
 
     const atcGrowth = sb(
-      ws, row, 'ATC Class Growth %', country.atcClassGrowth,
+      ws, row, 'ATC Class Growth %', country?.atcClassGrowth ?? zeroScenario,
       NP, cellMap, sheetKey, 'atcClassGrowth',
       NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
     );
     row = atcGrowth.nextRow;
 
-    writeInputRow(ws, row, 'Molecule ATC Share %', country.moleculeAtcShare, NP, cellMap, sheetKey, 'moleculeAtcShare', NUM_FMT.percent);
+    writeInputRow(ws, row, 'Molecule ATC Share %', country?.moleculeAtcShare ?? zeroArr, NP, cellMap, sheetKey, 'moleculeAtcShare', NUM_FMT.percent);
     row++;
 
     // Blank
@@ -208,7 +235,7 @@ function buildCountrySheet(
     for (let p = 0; p < NP; p++) {
       const col = periodCol(p);
       const cell = ws.getCell(row, col);
-      cell.value = country.originatorPrice[p] ?? 0;
+      cell.value = country?.originatorPrice[p] ?? 0;
       cell.numFmt = NUM_FMT.decimal2;
       if (p < forecastStartIdx || (forecastStartIdx <= 0 && p === 0)) {
         // Historical: editable input
@@ -224,7 +251,7 @@ function buildCountrySheet(
   row++;
 
   const origGrowth = sb(
-    ws, row, 'Originator Price Growth %', country.originatorPriceGrowth,
+    ws, row, 'Originator Price Growth %', country?.originatorPriceGrowth ?? zeroScenario,
     NP, cellMap, sheetKey, 'originatorPriceGrowth',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
@@ -238,7 +265,7 @@ function buildCountrySheet(
 
   // Biosimilar Penetration (total biosimilar share of molecule market)
   const biosimPen = sb(
-    ws, row, 'Biosimilar Penetration', country.biosimilarPenetration,
+    ws, row, 'Biosimilar Penetration', country?.biosimilarPenetration ?? zeroScenario,
     NP, cellMap, sheetKey, 'biosimilarPenetration',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
@@ -246,14 +273,14 @@ function buildCountrySheet(
 
   // Our Share of Biosimilar
   const ourShare = sb(
-    ws, row, 'Our Share of Biosimilar', country.ourShareOfBiosimilar,
+    ws, row, 'Our Share of Biosimilar', country?.ourShareOfBiosimilar ?? zeroScenario,
     NP, cellMap, sheetKey, 'ourShareOfBiosimilar',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = ourShare.nextRow;
 
   const biosimPrice = sb(
-    ws, row, 'Biosimilar Price % of Originator', country.biosimilarPricePct,
+    ws, row, 'Biosimilar Price % of Originator', country?.biosimilarPricePct ?? zeroScenario,
     NP, cellMap, sheetKey, 'biosimilarPricePct',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
@@ -266,34 +293,34 @@ function buildCountrySheet(
   row++;
 
   const partnerGtn = sb(
-    ws, row, 'Partner GTN %', country.partnerGtnPct,
+    ws, row, 'Partner GTN %', country?.partnerGtnPct ?? zeroScenario,
     NP, cellMap, sheetKey, 'partnerGtnPct',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = partnerGtn.nextRow;
 
   const supplyPrice = sb(
-    ws, row, 'Supply Price %', country.supplyPricePct,
+    ws, row, 'Supply Price %', country?.supplyPricePct ?? zeroScenario,
     NP, cellMap, sheetKey, 'supplyPricePct',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = supplyPrice.nextRow;
 
   const fixedSupply = sb(
-    ws, row, 'Fixed Supply Price/Gram', country.fixedSupplyPricePerGram,
+    ws, row, 'Fixed Supply Price/Gram', country?.fixedSupplyPricePerGram ?? zeroScenario,
     NP, cellMap, sheetKey, 'fixedSupplyPricePerGram',
     NUM_FMT.decimal2, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = fixedSupply.nextRow;
 
   const royalty = sb(
-    ws, row, 'Royalty Rate %', country.royaltyRatePct,
+    ws, row, 'Royalty Rate %', country?.royaltyRatePct ?? zeroScenario,
     NP, cellMap, sheetKey, 'royaltyRatePct',
     NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
   );
   row = royalty.nextRow;
 
-  writeInputRow(ws, row, 'Milestone Payments', country.milestonePayments, NP, cellMap, sheetKey, 'milestonePayments', NUM_FMT.integer);
+  writeInputRow(ws, row, 'Milestone Payments', country?.milestonePayments ?? zeroArr, NP, cellMap, sheetKey, 'milestonePayments', NUM_FMT.integer);
   row++;
 
   // Blank
@@ -306,7 +333,9 @@ function buildCountrySheet(
   row++;
 
   // Use Fixed Royalty Rate (dropdown)
-  writeScalarRow(ws, row, 'Use Fixed Royalty Rate', country.useFixedRoyaltyRate ? 'Yes' : 'No', cellMap, sheetKey, 'useFixedRoyaltyRate');
+  writeScalarRow(ws, row, 'Use Fixed Royalty Rate',
+    country?.useFixedRoyaltyRate ? 'Yes' : 'No',
+    cellMap, sheetKey, 'useFixedRoyaltyRate');
   ws.getCell(row, 2).dataValidation = {
     type: 'list',
     allowBlank: false,
@@ -318,7 +347,7 @@ function buildCountrySheet(
   row++;
 
   // Tier thresholds and rates (5 tiers)
-  const tiers = country.royaltyTiers ?? [];
+  const tiers = country?.royaltyTiers ?? [];
   for (let t = 0; t < 5; t++) {
     const tier = tiers[t] ?? { threshold: 0, rate: 0 };
 
@@ -339,27 +368,27 @@ function buildCountrySheet(
     writeSection(ws, row, 'Partner View Costs', colCount);
     row++;
 
-    writeInputRow(ws, row, 'Partner Promotional Costs', country.partnerPromotionalCosts ?? Array(NP).fill(0),
+    writeInputRow(ws, row, 'Partner Promotional Costs', country?.partnerPromotionalCosts ?? zeroArr,
       NP, cellMap, sheetKey, 'partnerPromotionalCosts', NUM_FMT.integer);
     row++;
 
-    writeInputRow(ws, row, 'Partner Sales Force Costs', country.partnerSalesForceCosts ?? Array(NP).fill(0),
+    writeInputRow(ws, row, 'Partner Sales Force Costs', country?.partnerSalesForceCosts ?? zeroArr,
       NP, cellMap, sheetKey, 'partnerSalesForceCosts', NUM_FMT.integer);
     row++;
 
-    writeInputRow(ws, row, 'Partner Distribution Costs', country.partnerDistributionCosts ?? Array(NP).fill(0),
+    writeInputRow(ws, row, 'Partner Distribution Costs', country?.partnerDistributionCosts ?? zeroArr,
       NP, cellMap, sheetKey, 'partnerDistributionCosts', NUM_FMT.integer);
     row++;
 
-    writeInputRow(ws, row, 'Partner Manufacturing Costs', country.partnerManufacturingCosts ?? Array(NP).fill(0),
+    writeInputRow(ws, row, 'Partner Manufacturing Costs', country?.partnerManufacturingCosts ?? zeroArr,
       NP, cellMap, sheetKey, 'partnerManufacturingCosts', NUM_FMT.integer);
     row++;
 
-    writeInputRow(ws, row, 'Partner G&A', country.partnerGAndA ?? Array(NP).fill(0),
+    writeInputRow(ws, row, 'Partner G&A', country?.partnerGAndA ?? zeroArr,
       NP, cellMap, sheetKey, 'partnerGAndA', NUM_FMT.integer);
     row++;
 
-    writeScalarRow(ws, row, 'Partner Tax Rate', country.partnerTaxRate ?? 0.25, cellMap, sheetKey, 'partnerTaxRate', NUM_FMT.percent);
+    writeScalarRow(ws, row, 'Partner Tax Rate', country?.partnerTaxRate ?? 0.25, cellMap, sheetKey, 'partnerTaxRate', NUM_FMT.percent);
     row++;
 
     // Blank
@@ -369,11 +398,12 @@ function buildCountrySheet(
   // ════════════════════════════════════════════════════════════
   // Section: Generic Competitors
   // ════════════════════════════════════════════════════════════
-  if (country.genericCompetitors.length > 0) {
+  const generics = country?.genericCompetitors ?? [];
+  if (generics.length > 0) {
     writeSection(ws, row, 'Generic Competitors', colCount);
     row++;
 
-    country.genericCompetitors.forEach((generic: GenericCompetitor, i: number) => {
+    generics.forEach((generic: GenericCompetitor, i: number) => {
       // Sub-section header
       writeSection(ws, row, `Generic ${i + 1}: ${generic.name}`, colCount);
       row++;
@@ -412,7 +442,7 @@ export function addInteractiveCountryInputSheets(
   ctx: ExportContext,
   cellMap: CellMap,
 ): void {
-  ctx.countries.forEach((country, idx) => {
-    buildCountrySheet(wb, country, idx, ctx, cellMap);
-  });
+  for (let s = 0; s < MAX_COUNTRY_SLOTS; s++) {
+    buildCountryInputSheet(wb, s, ctx, cellMap);
+  }
 }

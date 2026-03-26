@@ -8,6 +8,9 @@
 //   4. Pricing & Market Access  (template slide 9)
 //   5. Price vs Cost Evolution  (template slide 10)
 //   6. Financial Framework      (template slide 13)
+//
+// Layout precisely matches Molecule_Assessment_Report.pptx
+// (12 191 675 x 6 858 000 EMU = 13.333 x 7.5 inches, 16:9)
 // ──────────────────────────────────────────────────────────────
 
 import PptxGenJS from 'pptxgenjs';
@@ -29,9 +32,9 @@ export async function exportToPowerPoint(ctx: ExportContext): Promise<void> {
   pptx.subject = 'Molecule Assessment Report';
   pptx.title = `${ctx.config.moleculeName || 'Biosimilar'} — Molecule Assessment Report`;
 
-  // Widescreen 16:9 (matches template at 12191675 x 6858000 EMU)
-  pptx.defineLayout({ name: 'WIDE', width: 10, height: 5.63 });
-  pptx.layout = 'WIDE';
+  // Match template: 12 191 675 x 6 858 000 EMU → 13.333 x 7.5 inches
+  pptx.defineLayout({ name: 'TEMPLATE', width: 13.333, height: 7.5 });
+  pptx.layout = 'TEMPLATE';
 
   // Build slides in presentation order
   addMoleculeSnapshotSlide(pptx, ctx);     // Slide 1: Molecule Snapshot

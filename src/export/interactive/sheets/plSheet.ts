@@ -1,7 +1,8 @@
 // ──────────────────────────────────────────────────────────────
-// Interactive Excel — P&L (output) sheet builder
+// Interactive Excel — P&L (output) sheet builder (10-slot version)
 // ──────────────────────────────────────────────────────────────
-// Aggregates country-level outputs into a consolidated P&L.
+// Aggregates across all 10 country model slots into a consolidated P&L.
+// Inactive slots contribute 0 (their model sheets already return 0).
 // All cells use formulaValue — no editable inputs.
 // ──────────────────────────────────────────────────────────────
 
@@ -14,6 +15,10 @@ import {
   writeFormulaRow, writeSection,
   setupSheet, writePeriodHeader,
 } from '../formulaHelpers';
+import { MAX_COUNTRY_SLOTS } from './configSheet';
+
+/** Generate array [0, 1, 2, ..., MAX_COUNTRY_SLOTS-1] for iteration. */
+const SLOT_INDICES = Array.from({ length: MAX_COUNTRY_SLOTS }, (_, i) => i);
 
 export function addInteractivePLSheet(
   wb: Workbook,
@@ -39,50 +44,53 @@ export function addInteractivePLSheet(
   writeSection(ws, row, 'Revenue', colCount);
   row++;
 
-  // Per-country supply revenue rows
-  for (let ci = 0; ci < countries.length; ci++) {
-    const countryName = countries[ci].name;
+  // Per-slot supply revenue rows (all 10 — inactive ones contribute 0)
+  for (const si of SLOT_INDICES) {
+    const countryName = si < countries.length ? countries[si].name : `Country ${si + 1}`;
+    const cachedValues = si < countries.length
+      ? (plOutputs.netSupplyRevenueByCountry[si] ?? Array(NP).fill(0))
+      : Array(NP).fill(0);
 
     if (config.apiPricingModel === 'percentage') {
       // FX-convert: netSupplyRevenue / fxRate
       writeFormulaRow(ws, row, `Supply Revenue — ${countryName}`, NP, (p) => {
-        const nsRev = cellMap.get(`countryModel_${ci}`, 'netSupplyRevenue', p).toFormula();
-        const fx = cellMap.get(`countryModel_${ci}`, 'fxRate', p).toFormula();
+        const nsRev = cellMap.get(`countryModel_${si}`, 'netSupplyRevenue', p).toFormula();
+        const fx = cellMap.get(`countryModel_${si}`, 'fxRate', p).toFormula();
         return `IFERROR(${nsRev}/${fx},0)`;
-      }, plOutputs.netSupplyRevenueByCountry[ci], cellMap, sheetKey, `supplyRevByCountry_${ci}`, NUM_FMT.integer);
+      }, cachedValues, cellMap, sheetKey, `supplyRevByCountry_${si}`, NUM_FMT.integer);
     } else {
       // Fixed mode — already in model currency
       writeFormulaRow(ws, row, `Supply Revenue — ${countryName}`, NP, (p) => {
-        return cellMap.get(`countryModel_${ci}`, 'netSupplyRevenue', p).toFormula();
-      }, plOutputs.netSupplyRevenueByCountry[ci], cellMap, sheetKey, `supplyRevByCountry_${ci}`, NUM_FMT.integer);
+        return cellMap.get(`countryModel_${si}`, 'netSupplyRevenue', p).toFormula();
+      }, cachedValues, cellMap, sheetKey, `supplyRevByCountry_${si}`, NUM_FMT.integer);
     }
     row++;
   }
 
-  // Net Supply Revenue (total)
+  // Net Supply Revenue (total across all 10 slots)
   writeFormulaRow(ws, row, 'Net Supply Revenue', NP, (p) => {
-    const refs = countries.map((_, ci) =>
-      cellMap.get(sheetKey, `supplyRevByCountry_${ci}`, p).toLocal(),
+    const refs = SLOT_INDICES.map(si =>
+      cellMap.get(sheetKey, `supplyRevByCountry_${si}`, p).toLocal(),
     );
     return refs.join('+');
   }, plOutputs.totalNetSupplyRevenue, cellMap, sheetKey, 'totalNetSupplyRevenue', NUM_FMT.integer, true);
   row++;
 
-  // Royalty Income (FX-converted sum — royalty is now computed per-country in country model)
+  // Royalty Income (FX-converted sum across all 10 slots)
   writeFormulaRow(ws, row, 'Royalty Income', NP, (p) => {
-    const refs = countries.map((_, ci) => {
-      const royalty = cellMap.get(`countryModel_${ci}`, 'royaltyIncome', p).toFormula();
-      const fx = cellMap.get(`countryModel_${ci}`, 'fxRate', p).toFormula();
+    const refs = SLOT_INDICES.map(si => {
+      const royalty = cellMap.get(`countryModel_${si}`, 'royaltyIncome', p).toFormula();
+      const fx = cellMap.get(`countryModel_${si}`, 'fxRate', p).toFormula();
       return `IFERROR(${royalty}/${fx},0)`;
     });
     return refs.join('+');
   }, plOutputs.totalRoyaltyIncome, cellMap, sheetKey, 'totalRoyaltyIncome', NUM_FMT.integer);
   row++;
 
-  // Milestone Income (no FX — already in model currency)
+  // Milestone Income (no FX — already in model currency, sum across all 10 slots)
   writeFormulaRow(ws, row, 'Milestone Income', NP, (p) => {
-    const refs = countries.map((_, ci) =>
-      cellMap.get(`countryModel_${ci}`, 'milestoneIncome', p).toFormula(),
+    const refs = SLOT_INDICES.map(si =>
+      cellMap.get(`countryModel_${si}`, 'milestoneIncome', p).toFormula(),
     );
     return refs.join('+');
   }, plOutputs.totalMilestoneIncome, cellMap, sheetKey, 'totalMilestoneIncome', NUM_FMT.integer);
@@ -113,18 +121,18 @@ export function addInteractivePLSheet(
   const cogsOverheadRef = cellMap.getScalar('config', 'cogsOverhead').toFormula();
   const cogsMarkupRef = cellMap.getScalar('config', 'cogsMarkup').toFormula();
 
-  // #2: COGS now includes overhead % and markup %, supports per-gram and per-unit methods
+  // COGS: aggregate grams and units across all 10 slots
   writeFormulaRow(ws, row, 'COGS', NP, (p) => {
     if (p < earliestLoeIdx) return '0';
     const yearsFromLOE = p - earliestLoeIdx;
-    const gramsRefs = countries.map((_, ci) =>
-      cellMap.get(`countryModel_${ci}`, 'apiGramsSupplied', p).toFormula(),
+    const gramsRefs = SLOT_INDICES.map(si =>
+      cellMap.get(`countryModel_${si}`, 'apiGramsSupplied', p).toFormula(),
     );
-    const gramsSum = gramsRefs.length === 1 ? gramsRefs[0] : `(${gramsRefs.join('+')})`;
-    const unitsRefs = countries.map((_, ci) =>
-      cellMap.get(`countryModel_${ci}`, 'biosimilarVolume', p).toFormula(),
+    const gramsSum = `(${gramsRefs.join('+')})`;
+    const unitsRefs = SLOT_INDICES.map(si =>
+      cellMap.get(`countryModel_${si}`, 'biosimilarVolume', p).toFormula(),
     );
-    const unitsSum = unitsRefs.length === 1 ? unitsRefs[0] : `(${unitsRefs.join('+')})`;
+    const unitsSum = `(${unitsRefs.join('+')})`;
     const inflFactor = `POWER(1+${cogsInflRef},${yearsFromLOE})`;
     const overheadMarkup = `(1+${cogsOverheadRef})*(1+${cogsMarkupRef})`;
     // IF(method="perUnit", -costPerUnit*infl*OH*MU*units, -costPerGram*infl*OH*MU*grams)
@@ -132,7 +140,7 @@ export function addInteractivePLSheet(
   }, plOutputs.cogs, cellMap, sheetKey, 'cogs', NUM_FMT.integer);
   row++;
 
-  // #6: Other Income
+  // Other Income
   writeFormulaRow(ws, row, 'Other Income', NP, (p) => {
     return cellMap.get('plAssumptions', 'otherIncome_active', p).toFormula();
   }, plOutputs.otherIncome, cellMap, sheetKey, 'otherIncome', NUM_FMT.integer);
@@ -290,7 +298,7 @@ export function addInteractivePLSheet(
   }, plOutputs.ebitMargin, cellMap, sheetKey, 'ebitMargin', NUM_FMT.percent);
   row++;
 
-  // #3: Financial Costs
+  // Financial Costs
   writeFormulaRow(ws, row, 'Financial Costs', NP, (p) => {
     const ref = cellMap.get('plAssumptions', 'financialCosts_active', p).toFormula();
     return `-ABS(${ref})`;
@@ -329,7 +337,7 @@ export function addInteractivePLSheet(
   }, plOutputs.netIncomeMargin, cellMap, sheetKey, 'netIncomeMargin', NUM_FMT.percent);
   row++;
 
-  // #5: Cumulative Net Income
+  // Cumulative Net Income
   writeFormulaRow(ws, row, 'Cumulative Net Income', NP, (p) => {
     const ni = cellMap.get(sheetKey, 'netIncome', p).toLocal();
     if (p === 0) return ni;
@@ -355,7 +363,6 @@ export function addInteractivePLSheet(
   row++;
 
   // Working Capital Change (days-based automatic calculation)
-  // Uses totalRevenue (supply + royalty + milestone) to match the web model
   writeFormulaRow(ws, row, 'Working Capital Change', NP, (p) => {
     const recvDaysRef = cellMap.getScalar('plAssumptions', 'receivableDays').toFormula();
     const payDaysRef = cellMap.getScalar('plAssumptions', 'payableDays').toFormula();
@@ -363,12 +370,10 @@ export function addInteractivePLSheet(
     const rev = cellMap.get(sheetKey, 'totalRevenue', p).toLocal();
     const cogsCurr = cellMap.get(sheetKey, 'cogs', p).toLocal();
     if (p === 0) {
-      // Year 0: full balance — WC = -(Rev/365*RecvDays) + (ABS(COGS)/365*PayDays) - (ABS(COGS)/365*InvDays)
       return `-(${rev}/365*${recvDaysRef})+(ABS(${cogsCurr})/365*${payDaysRef})-(ABS(${cogsCurr})/365*${invDaysRef})`;
     }
     const prevRev = cellMap.get(sheetKey, 'totalRevenue', p - 1).toLocal();
     const prevCogs = cellMap.get(sheetKey, 'cogs', p - 1).toLocal();
-    // Year 1+: delta-based — WC = -(ΔRev/365*RecvDays) + (Δ|COGS|/365*PayDays) - (Δ|COGS|/365*InvDays)
     return `-((${rev}-${prevRev})/365*${recvDaysRef})+((ABS(${cogsCurr})-ABS(${prevCogs}))/365*${payDaysRef})-((ABS(${cogsCurr})-ABS(${prevCogs}))/365*${invDaysRef})`;
   }, plOutputs.workingCapitalChange, cellMap, sheetKey, 'wcChange', NUM_FMT.integer);
   row++;

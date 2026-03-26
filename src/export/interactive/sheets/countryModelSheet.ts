@@ -1,39 +1,58 @@
 // ──────────────────────────────────────────────────────────────
-// Interactive Excel — Per-country MODEL (output) sheet builder
+// Interactive Excel — Per-country MODEL (output) sheet builder (10 slots)
 // ──────────────────────────────────────────────────────────────
-// Each country gets a formula-only sheet that references the
-// country INPUT sheet via the CellMap. All cells use formulaValue.
+// Creates 10 model sheets ("C1 Model" ... "C10 Model"). Every
+// formula is wrapped in IF(Config!Active="Yes", formula, 0) so
+// inactive country slots produce zeros throughout.
 // ──────────────────────────────────────────────────────────────
 
 import type { Workbook } from 'exceljs';
 import type { ExportContext } from '../../exportTypes';
 import type { CellMap } from '../cellMap';
+import type { CountryAssumptions, CountryOutputs } from '../../../types';
 import { NUM_FMT } from '../../excelStyles';
 import {
   cellAddr, periodCol,
   writeFormulaRow, writeSection,
   setupSheet, writePeriodHeader,
 } from '../formulaHelpers';
+import { MAX_COUNTRY_SLOTS } from './configSheet';
 
-// ── Main builder for a single country ──
+/** Sheet name for country model slot (0-based). */
+export function countryModelSheetName(slotIndex: number): string {
+  return `C${slotIndex + 1} Model`;
+}
+
+// ── Main builder for a single country slot ──
 
 function buildCountryModelSheet(
   wb: Workbook,
-  ci: number,
+  slotIndex: number,
   ctx: ExportContext,
   cellMap: CellMap,
 ): void {
-  const country = ctx.countries[ci];
-  const co = ctx.countryOutputs[ci];
-  const sheetKey = `countryModel_${ci}`;
-  const inputKey = `country_${ci}`;
-  const sheetName = `${country.name} Model`.slice(0, 31);
+  const hasData = slotIndex < ctx.countries.length;
+  const country: CountryAssumptions | null = hasData ? ctx.countries[slotIndex] : null;
+  const co: CountryOutputs | null = hasData ? ctx.countryOutputs[slotIndex] : null;
+
+  const sheetKey = `countryModel_${slotIndex}`;
+  const inputKey = `country_${slotIndex}`;
+  const sheetName = countryModelSheetName(slotIndex);
   const ws = wb.addWorksheet(sheetName);
 
   const NP = ctx.periodLabels.length;
   const colCount = NP + 1;
   const forecastStartIdx = ctx.config.forecastStartYear - ctx.periodConfig.startYear;
-  const launchIdx = country.biosimilarLaunchPeriodIndex;
+  const launchIdx = country?.biosimilarLaunchPeriodIndex ?? 5;
+
+  // Active? reference from Config sheet
+  const activeRef = cellMap.getScalar('config', `countryActive_${slotIndex}`).toFormula();
+
+  // Helper: wrap a formula with IF(active="Yes", formula, 0)
+  const guard = (formula: string): string => `IF(${activeRef}="Yes",${formula},0)`;
+
+  // Zero arrays for cached values when no data
+  const zeroArr = Array(NP).fill(0);
 
   setupSheet(ws, NP);
   writePeriodHeader(ws, ctx.periodLabels);
@@ -49,15 +68,15 @@ function buildCountryModelSheet(
   // 1. Market Volume
   writeFormulaRow(ws, row, 'Market Volume', NP, (p) => {
     if (p < forecastStartIdx) {
-      return cellMap.get(inputKey, 'marketVolume', p).toFormula();
+      return guard(cellMap.get(inputKey, 'marketVolume', p).toFormula());
     }
     if (p === 0) {
-      return cellMap.get(inputKey, 'marketVolume', p).toFormula();
+      return guard(cellMap.get(inputKey, 'marketVolume', p).toFormula());
     }
     const prevRef = cellAddr(row, periodCol(p - 1));
     const adjRef = cellMap.get(inputKey, 'volumeAdjustment_active', p).toFormula();
-    return `${prevRef}*(1+${adjRef})`;
-  }, co.marketVolume, cellMap, sheetKey, 'marketVolume', NUM_FMT.integer, true);
+    return guard(`${prevRef}*(1+${adjRef})`);
+  }, co?.marketVolume ?? zeroArr, cellMap, sheetKey, 'marketVolume', NUM_FMT.integer, true);
   row++;
 
   // 2. Volume YoY %
@@ -67,27 +86,27 @@ function buildCountryModelSheet(
     const thisRef = cellAddr(marketVolRow, periodCol(p));
     const prevRef = cellAddr(marketVolRow, periodCol(p - 1));
     return `IFERROR((${thisRef}-${prevRef})/${prevRef},0)`;
-  }, co.marketVolumeYoY, cellMap, sheetKey, 'marketVolumeYoY', NUM_FMT.percent);
+  }, co?.marketVolumeYoY ?? zeroArr, cellMap, sheetKey, 'marketVolumeYoY', NUM_FMT.percent);
   row++;
 
   // 3. Originator Ref Price
   writeFormulaRow(ws, row, 'Originator Ref Price', NP, (p) => {
     if (p < forecastStartIdx) {
-      return cellMap.get(inputKey, 'originatorPrice', p).toFormula();
+      return guard(cellMap.get(inputKey, 'originatorPrice', p).toFormula());
     }
     if (p === 0) {
-      return cellMap.get(inputKey, 'originatorPrice', p).toFormula();
+      return guard(cellMap.get(inputKey, 'originatorPrice', p).toFormula());
     }
     const prevRef = cellAddr(row, periodCol(p - 1));
     const growthRef = cellMap.get(inputKey, 'originatorPriceGrowth_active', p).toFormula();
-    return `${prevRef}*(1+${growthRef})`;
-  }, co.originatorRefPrice, cellMap, sheetKey, 'originatorRefPrice', NUM_FMT.decimal2);
+    return guard(`${prevRef}*(1+${growthRef})`);
+  }, co?.originatorRefPrice ?? zeroArr, cellMap, sheetKey, 'originatorRefPrice', NUM_FMT.decimal2);
   row++;
 
   // 4. FX Rate (display)
   writeFormulaRow(ws, row, 'FX Rate', NP, (p) => {
-    return cellMap.get(inputKey, 'fxRate', p).toFormula();
-  }, country.fxRate, cellMap, sheetKey, 'fxRate', NUM_FMT.decimal2);
+    return guard(cellMap.get(inputKey, 'fxRate', p).toFormula());
+  }, country?.fxRate ?? zeroArr, cellMap, sheetKey, 'fxRate', NUM_FMT.decimal2);
   row++;
 
   // Blank
@@ -96,8 +115,8 @@ function buildCountryModelSheet(
   // ════════════════════════════════════════════════════════════
   // Section: Generic Competitors
   // ════════════════════════════════════════════════════════════
-  const generics = country.genericCompetitors;
-  if (generics.length > 0) {
+  const generics = country?.genericCompetitors ?? [];
+  if (generics.length > 0 && co) {
     writeSection(ws, row, 'Generic Competitors', colCount);
     row++;
 
@@ -108,7 +127,7 @@ function buildCountryModelSheet(
       // Generic share
       writeFormulaRow(ws, row, `Generic ${g + 1} Share`, NP, (p) => {
         if (p < gLaunch) return '0';
-        return cellMap.get(inputKey, `generic_${g}_marketShare_active`, p).toFormula();
+        return guard(cellMap.get(inputKey, `generic_${g}_marketShare_active`, p).toFormula());
       }, gOut.share, cellMap, sheetKey, `generic_${g}_share`, NUM_FMT.percent);
       row++;
 
@@ -117,7 +136,7 @@ function buildCountryModelSheet(
       writeFormulaRow(ws, row, `Generic ${g + 1} Volume`, NP, (p) => {
         const mktVol = cellMap.get(sheetKey, 'marketVolume', p).toLocal();
         const share = cellAddr(gShareRow, periodCol(p));
-        return `${mktVol}*${share}`;
+        return guard(`${mktVol}*${share}`);
       }, gOut.volume, cellMap, sheetKey, `generic_${g}_volume`, NUM_FMT.integer);
       row++;
 
@@ -126,7 +145,7 @@ function buildCountryModelSheet(
         if (p < gLaunch) return '0';
         const origPrice = cellMap.get(sheetKey, 'originatorRefPrice', p).toLocal();
         const pricePct = cellMap.get(inputKey, `generic_${g}_pricePct_active`, p).toFormula();
-        return `${origPrice}*${pricePct}`;
+        return guard(`${origPrice}*${pricePct}`);
       }, gOut.price, cellMap, sheetKey, `generic_${g}_price`, NUM_FMT.decimal2);
       row++;
 
@@ -136,7 +155,7 @@ function buildCountryModelSheet(
       writeFormulaRow(ws, row, `Generic ${g + 1} Sales`, NP, (p) => {
         const vol = cellAddr(gVolRow, periodCol(p));
         const price = cellAddr(gPriceRow, periodCol(p));
-        return `${vol}*${price}`;
+        return guard(`${vol}*${price}`);
       }, gOut.sales, cellMap, sheetKey, `generic_${g}_sales`, NUM_FMT.integer);
       row++;
 
@@ -173,13 +192,13 @@ function buildCountryModelSheet(
   } else {
     // No generics — register zero rows
     writeFormulaRow(ws, row, 'Total Generic Share', NP, () => '0',
-      co.totalGenericShare, cellMap, sheetKey, 'totalGenericShare', NUM_FMT.percent, true);
+      co?.totalGenericShare ?? zeroArr, cellMap, sheetKey, 'totalGenericShare', NUM_FMT.percent, true);
     row++;
     writeFormulaRow(ws, row, 'Total Generic Volume', NP, () => '0',
-      co.totalGenericVolume, cellMap, sheetKey, 'totalGenericVolume', NUM_FMT.integer, true);
+      co?.totalGenericVolume ?? zeroArr, cellMap, sheetKey, 'totalGenericVolume', NUM_FMT.integer, true);
     row++;
     writeFormulaRow(ws, row, 'Total Generic Sales', NP, () => '0',
-      co.totalGenericSales, cellMap, sheetKey, 'totalGenericSales', NUM_FMT.integer, true);
+      co?.totalGenericSales ?? zeroArr, cellMap, sheetKey, 'totalGenericSales', NUM_FMT.integer, true);
     row++;
   }
 
@@ -195,40 +214,40 @@ function buildCountryModelSheet(
   // 12a. Biosimilar Penetration (total biosimilar share of molecule market)
   writeFormulaRow(ws, row, 'Biosimilar Penetration', NP, (p) => {
     if (p < launchIdx) return '0';
-    return cellMap.get(inputKey, 'biosimilarPenetration_active', p).toFormula();
-  }, co.totalBiosimilarVolume.map((v, i) => co.marketVolume[i] > 0 ? v / co.marketVolume[i] : 0),
+    return guard(cellMap.get(inputKey, 'biosimilarPenetration_active', p).toFormula());
+  }, co ? co.totalBiosimilarVolume.map((v, i) => co.marketVolume[i] > 0 ? v / co.marketVolume[i] : 0) : zeroArr,
     cellMap, sheetKey, 'biosimilarPenetration', NUM_FMT.percent);
   row++;
 
-  // 12b. Total Biosimilar Volume = Market Volume × Biosimilar Penetration
+  // 12b. Total Biosimilar Volume = Market Volume x Biosimilar Penetration
   writeFormulaRow(ws, row, 'Total Biosimilar Volume', NP, (p) => {
     const mktVol = cellMap.get(sheetKey, 'marketVolume', p).toLocal();
     const pen = cellMap.get(sheetKey, 'biosimilarPenetration', p).toLocal();
-    return `${mktVol}*${pen}`;
-  }, co.totalBiosimilarVolume, cellMap, sheetKey, 'totalBiosimilarVolume', NUM_FMT.integer);
+    return guard(`${mktVol}*${pen}`);
+  }, co?.totalBiosimilarVolume ?? zeroArr, cellMap, sheetKey, 'totalBiosimilarVolume', NUM_FMT.integer);
   row++;
 
   // 12c. Our Share of Biosimilar
   writeFormulaRow(ws, row, 'Our Share of Biosimilar', NP, (p) => {
     if (p < launchIdx) return '0';
-    return cellMap.get(inputKey, 'ourShareOfBiosimilar_active', p).toFormula();
-  }, co.ourShareOfBiosimilarArr, cellMap, sheetKey, 'ourShareOfBiosimilar', NUM_FMT.percent);
+    return guard(cellMap.get(inputKey, 'ourShareOfBiosimilar_active', p).toFormula());
+  }, co?.ourShareOfBiosimilarArr ?? zeroArr, cellMap, sheetKey, 'ourShareOfBiosimilar', NUM_FMT.percent);
   row++;
 
-  // 12d. Our Market Share (= penetration × our share)
+  // 12d. Our Market Share (= penetration x our share)
   writeFormulaRow(ws, row, 'Our Market Share', NP, (p) => {
     const pen = cellMap.get(sheetKey, 'biosimilarPenetration', p).toLocal();
     const ourShr = cellMap.get(sheetKey, 'ourShareOfBiosimilar', p).toLocal();
-    return `${pen}*${ourShr}`;
-  }, co.biosimilarShare, cellMap, sheetKey, 'biosimilarShare', NUM_FMT.percent);
+    return guard(`${pen}*${ourShr}`);
+  }, co?.biosimilarShare ?? zeroArr, cellMap, sheetKey, 'biosimilarShare', NUM_FMT.percent);
   row++;
 
-  // 13. Our Volume = Total Biosimilar Volume × Our Share
+  // 13. Our Volume = Total Biosimilar Volume x Our Share
   writeFormulaRow(ws, row, 'Our Volume', NP, (p) => {
     const totalBioVol = cellMap.get(sheetKey, 'totalBiosimilarVolume', p).toLocal();
     const ourShr = cellMap.get(sheetKey, 'ourShareOfBiosimilar', p).toLocal();
-    return `${totalBioVol}*${ourShr}`;
-  }, co.biosimilarVolume, cellMap, sheetKey, 'biosimilarVolume', NUM_FMT.integer);
+    return guard(`${totalBioVol}*${ourShr}`);
+  }, co?.biosimilarVolume ?? zeroArr, cellMap, sheetKey, 'biosimilarVolume', NUM_FMT.integer);
   row++;
 
   // 14. In-Market Price
@@ -236,16 +255,16 @@ function buildCountryModelSheet(
     if (p < launchIdx) return '0';
     const origPrice = cellMap.get(sheetKey, 'originatorRefPrice', p).toLocal();
     const pricePct = cellMap.get(inputKey, 'biosimilarPricePct_active', p).toFormula();
-    return `${origPrice}*${pricePct}`;
-  }, co.biosimilarInMarketPrice, cellMap, sheetKey, 'biosimilarInMarketPrice', NUM_FMT.decimal2);
+    return guard(`${origPrice}*${pricePct}`);
+  }, co?.biosimilarInMarketPrice ?? zeroArr, cellMap, sheetKey, 'biosimilarInMarketPrice', NUM_FMT.decimal2);
   row++;
 
   // 15. In-Market Sales
   writeFormulaRow(ws, row, 'In-Market Sales', NP, (p) => {
     const vol = cellMap.get(sheetKey, 'biosimilarVolume', p).toLocal();
     const price = cellMap.get(sheetKey, 'biosimilarInMarketPrice', p).toLocal();
-    return `${vol}*${price}`;
-  }, co.biosimilarInMarketSales, cellMap, sheetKey, 'biosimilarInMarketSales', NUM_FMT.integer);
+    return guard(`${vol}*${price}`);
+  }, co?.biosimilarInMarketSales ?? zeroArr, cellMap, sheetKey, 'biosimilarInMarketSales', NUM_FMT.integer);
   row++;
 
   // Blank
@@ -260,24 +279,24 @@ function buildCountryModelSheet(
   // 16. Originator Share = 1 - biosimilarPenetration (total, not just ours)
   writeFormulaRow(ws, row, 'Originator Share', NP, (p) => {
     const biosPen = cellMap.get(sheetKey, 'biosimilarPenetration', p).toLocal();
-    return `MAX(0,1-${biosPen})`;
-  }, co.originatorShare, cellMap, sheetKey, 'originatorShare', NUM_FMT.percent);
+    return guard(`MAX(0,1-${biosPen})`);
+  }, co?.originatorShare ?? zeroArr, cellMap, sheetKey, 'originatorShare', NUM_FMT.percent);
   row++;
 
   // 17. Originator Volume
   writeFormulaRow(ws, row, 'Originator Volume', NP, (p) => {
     const mktVol = cellMap.get(sheetKey, 'marketVolume', p).toLocal();
     const share = cellMap.get(sheetKey, 'originatorShare', p).toLocal();
-    return `${mktVol}*${share}`;
-  }, co.originatorVolume, cellMap, sheetKey, 'originatorVolume', NUM_FMT.integer);
+    return guard(`${mktVol}*${share}`);
+  }, co?.originatorVolume ?? zeroArr, cellMap, sheetKey, 'originatorVolume', NUM_FMT.integer);
   row++;
 
   // 18. Originator Sales
   writeFormulaRow(ws, row, 'Originator Sales', NP, (p) => {
     const vol = cellMap.get(sheetKey, 'originatorVolume', p).toLocal();
     const price = cellMap.get(sheetKey, 'originatorRefPrice', p).toLocal();
-    return `${vol}*${price}`;
-  }, co.originatorSales, cellMap, sheetKey, 'originatorSales', NUM_FMT.integer);
+    return guard(`${vol}*${price}`);
+  }, co?.originatorSales ?? zeroArr, cellMap, sheetKey, 'originatorSales', NUM_FMT.integer);
   row++;
 
   // Blank
@@ -294,16 +313,16 @@ function buildCountryModelSheet(
     if (p < launchIdx) return '0';
     const inMktPrice = cellMap.get(sheetKey, 'biosimilarInMarketPrice', p).toLocal();
     const gtnPct = cellMap.get(inputKey, 'partnerGtnPct_active', p).toFormula();
-    return `${inMktPrice}*(1-${gtnPct})`;
-  }, co.partnerNetSellingPrice, cellMap, sheetKey, 'partnerNetSellingPrice', NUM_FMT.decimal2);
+    return guard(`${inMktPrice}*(1-${gtnPct})`);
+  }, co?.partnerNetSellingPrice ?? zeroArr, cellMap, sheetKey, 'partnerNetSellingPrice', NUM_FMT.decimal2);
   row++;
 
   // 20. Partner Net Sales
   writeFormulaRow(ws, row, 'Partner Net Sales', NP, (p) => {
     const nsp = cellMap.get(sheetKey, 'partnerNetSellingPrice', p).toLocal();
     const vol = cellMap.get(sheetKey, 'biosimilarVolume', p).toLocal();
-    return `${nsp}*${vol}`;
-  }, co.partnerNetSales, cellMap, sheetKey, 'partnerNetSales', NUM_FMT.integer);
+    return guard(`${nsp}*${vol}`);
+  }, co?.partnerNetSales ?? zeroArr, cellMap, sheetKey, 'partnerNetSales', NUM_FMT.integer);
   row++;
 
   // 21. API Grams Supplied = Volume / UnitsPerGram (no overage — matches web model)
@@ -312,8 +331,8 @@ function buildCountryModelSheet(
   writeFormulaRow(ws, row, 'API Grams Supplied', NP, (p) => {
     if (p < launchIdx) return '0';
     const vol = cellMap.get(sheetKey, 'biosimilarVolume', p).toLocal();
-    return `${vol}/${unitsPerGramRef}`;
-  }, co.apiGramsSupplied, cellMap, sheetKey, 'apiGramsSupplied', NUM_FMT.decimal2);
+    return guard(`${vol}/${unitsPerGramRef}`);
+  }, co?.apiGramsSupplied ?? zeroArr, cellMap, sheetKey, 'apiGramsSupplied', NUM_FMT.decimal2);
   row++;
 
   // 22. API Price/Gram
@@ -323,13 +342,13 @@ function buildCountryModelSheet(
       const partnerNS = cellMap.get(sheetKey, 'partnerNetSales', p).toLocal();
       const vol = cellMap.get(sheetKey, 'biosimilarVolume', p).toLocal();
       const supplyPct = cellMap.get(inputKey, 'supplyPricePct_active', p).toFormula();
-      return `IFERROR(${partnerNS}/(${vol}/${unitsPerGramRef})*${supplyPct},0)`;
-    }, co.apiPricePerGram, cellMap, sheetKey, 'apiPricePerGram', NUM_FMT.decimal2);
+      return guard(`IFERROR(${partnerNS}/(${vol}/${unitsPerGramRef})*${supplyPct},0)`);
+    }, co?.apiPricePerGram ?? zeroArr, cellMap, sheetKey, 'apiPricePerGram', NUM_FMT.decimal2);
   } else {
     writeFormulaRow(ws, row, 'API Price/Gram', NP, (p) => {
       if (p < launchIdx) return '0';
-      return cellMap.get(inputKey, 'fixedSupplyPricePerGram_active', p).toFormula();
-    }, co.apiPricePerGram, cellMap, sheetKey, 'apiPricePerGram', NUM_FMT.decimal2);
+      return guard(cellMap.get(inputKey, 'fixedSupplyPricePerGram_active', p).toFormula());
+    }, co?.apiPricePerGram ?? zeroArr, cellMap, sheetKey, 'apiPricePerGram', NUM_FMT.decimal2);
   }
   row++;
 
@@ -337,22 +356,22 @@ function buildCountryModelSheet(
   writeFormulaRow(ws, row, 'Gross Supply Revenue', NP, (p) => {
     const grams = cellMap.get(sheetKey, 'apiGramsSupplied', p).toLocal();
     const price = cellMap.get(sheetKey, 'apiPricePerGram', p).toLocal();
-    return `${grams}*${price}`;
-  }, co.grossSupplyRevenue, cellMap, sheetKey, 'grossSupplyRevenue', NUM_FMT.integer);
+    return guard(`${grams}*${price}`);
+  }, co?.grossSupplyRevenue ?? zeroArr, cellMap, sheetKey, 'grossSupplyRevenue', NUM_FMT.integer);
   row++;
 
   // 24. Net Supply Revenue
   writeFormulaRow(ws, row, 'Net Supply Revenue', NP, (p) => {
     return cellMap.get(sheetKey, 'grossSupplyRevenue', p).toLocal();
-  }, co.netSupplyRevenue, cellMap, sheetKey, 'netSupplyRevenue', NUM_FMT.integer, true);
+  }, co?.netSupplyRevenue ?? zeroArr, cellMap, sheetKey, 'netSupplyRevenue', NUM_FMT.integer, true);
   row++;
 
   // 25. Royalty Income (flat — used when useFixedRoyaltyRate=1)
   writeFormulaRow(ws, row, 'Royalty (Flat)', NP, (p) => {
     const partnerNS = cellMap.get(sheetKey, 'partnerNetSales', p).toLocal();
     const royaltyPct = cellMap.get(inputKey, 'royaltyRatePct_active', p).toFormula();
-    return `${partnerNS}*${royaltyPct}`;
-  }, co.royaltyIncome, cellMap, sheetKey, 'royaltyFlat', NUM_FMT.integer);
+    return guard(`${partnerNS}*${royaltyPct}`);
+  }, co?.royaltyIncome ?? zeroArr, cellMap, sheetKey, 'royaltyFlat', NUM_FMT.integer);
   row++;
 
   // 25b. Royalty Income (tiered — cumulative per-country PNS, ratchet logic via marginal tiers)
@@ -370,8 +389,8 @@ function buildCountryModelSheet(
         tierFormulas.push(`MAX(0,MIN(${partnerNS},${threshRef})-${prevThreshRef})*${rateRef}`);
       }
     }
-    return tierFormulas.join('+');
-  }, co.royaltyIncome, cellMap, sheetKey, 'royaltyTiered', NUM_FMT.integer);
+    return guard(tierFormulas.join('+'));
+  }, co?.royaltyIncome ?? zeroArr, cellMap, sheetKey, 'royaltyTiered', NUM_FMT.integer);
   row++;
 
   // 25c. Royalty Income (switch: IF useFixedRoyaltyRate=1 then flat, else tiered)
@@ -379,14 +398,14 @@ function buildCountryModelSheet(
   writeFormulaRow(ws, row, 'Royalty Income', NP, (p) => {
     const flat = cellMap.get(sheetKey, 'royaltyFlat', p).toLocal();
     const tiered = cellMap.get(sheetKey, 'royaltyTiered', p).toLocal();
-    return `IF(${useFixedRef}="Yes",${flat},${tiered})`;
-  }, co.royaltyIncome, cellMap, sheetKey, 'royaltyIncome', NUM_FMT.integer);
+    return guard(`IF(${useFixedRef}="Yes",${flat},${tiered})`);
+  }, co?.royaltyIncome ?? zeroArr, cellMap, sheetKey, 'royaltyIncome', NUM_FMT.integer);
   row++;
 
   // 26. Milestone Income
   writeFormulaRow(ws, row, 'Milestone Income', NP, (p) => {
-    return cellMap.get(inputKey, 'milestonePayments', p).toFormula();
-  }, co.milestoneIncome, cellMap, sheetKey, 'milestoneIncome', NUM_FMT.integer);
+    return guard(cellMap.get(inputKey, 'milestonePayments', p).toFormula());
+  }, co?.milestoneIncome ?? zeroArr, cellMap, sheetKey, 'milestoneIncome', NUM_FMT.integer);
   row++;
 }
 
@@ -397,7 +416,7 @@ export function addInteractiveCountryModelSheets(
   ctx: ExportContext,
   cellMap: CellMap,
 ): void {
-  ctx.countries.forEach((_, ci) => {
-    buildCountryModelSheet(wb, ci, ctx, cellMap);
-  });
+  for (let s = 0; s < MAX_COUNTRY_SLOTS; s++) {
+    buildCountryModelSheet(wb, s, ctx, cellMap);
+  }
 }
