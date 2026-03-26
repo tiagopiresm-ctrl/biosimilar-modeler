@@ -1,8 +1,10 @@
 // ──────────────────────────────────────────────────────────────
 // Slide 3: Sales by Geography (maps to template slide 5)
 //
-// Table: Geography | Market Size | Volume | Price/Unit | Share of Global
-// One row per country, total row at bottom.
+// Layout (13.333 x 7.5"):
+//   Full-width table:
+//     Geography | Market Size | BS Volume | Price/Unit | Share of Global
+//   Navy header row, alternating stripe, navy total row.
 // ──────────────────────────────────────────────────────────────
 
 import type PptxGenJS from 'pptxgenjs';
@@ -12,7 +14,7 @@ import {
   applyLayout,
   MARGIN_X, CONTENT_TOP, CONTENT_W,
   TABLE_HDR, TABLE_HDR_R, tableCellOpts,
-  DARK_BLUE, FONT, GRAY, WHITE,
+  NAVY, FONT, GRAY, WHITE,
 } from './slideLayout';
 
 export function addSalesByGeographySlide(pptx: PptxGenJS, ctx: ExportContext): void {
@@ -24,7 +26,7 @@ export function addSalesByGeographySlide(pptx: PptxGenJS, ctx: ExportContext): v
 
   if (countries.length === 0) {
     slide.addText('No countries configured', {
-      x: 1, y: 2.5, w: 8, h: 1,
+      x: 2, y: 3.5, w: 9, h: 1,
       fontSize: 14, fontFace: FONT, color: GRAY, align: 'center',
     });
     return;
@@ -48,16 +50,15 @@ export function addSalesByGeographySlide(pptx: PptxGenJS, ctx: ExportContext): v
     const peakMarketValue = Math.max(...co.totalMarketValue);
     const peakVolume = Math.max(...co.biosimilarVolume);
 
-    // Average price (sales / volume)
-    let totalSales = 0;
-    let totalVol = 0;
+    let tSales = 0;
+    let tVol = 0;
     for (let p = 0; p < co.biosimilarVolume.length; p++) {
       if (co.biosimilarVolume[p] > 0) {
-        totalSales += co.biosimilarInMarketSales[p];
-        totalVol += co.biosimilarVolume[p];
+        tSales += co.biosimilarInMarketSales[p];
+        tVol += co.biosimilarVolume[p];
       }
     }
-    const avgPrice = totalVol > 0 ? (totalSales / totalVol) * 1000 : 0;
+    const avgPrice = tVol > 0 ? (tSales / tVol) * 1000 : 0;
 
     geoRows.push({ name: c.name, peakMarketValue, peakVolume, avgPrice });
     globalMarketValue += peakMarketValue;
@@ -87,11 +88,11 @@ export function addSalesByGeographySlide(pptx: PptxGenJS, ctx: ExportContext): v
     ]);
   }
 
-  // Total row
+  // Total row (navy background, white text)
   const totalVol = geoRows.reduce((s, g) => s + g.peakVolume, 0);
   const totalStyle = {
-    fontSize: 7.5, fontFace: FONT, bold: true as const, color: WHITE,
-    fill: { color: DARK_BLUE },
+    fontSize: 8, fontFace: FONT, bold: true as const, color: WHITE,
+    fill: { color: NAVY },
   };
   const totalR = { ...totalStyle, align: 'right' as const };
 
@@ -104,8 +105,8 @@ export function addSalesByGeographySlide(pptx: PptxGenJS, ctx: ExportContext): v
   ]);
 
   // ── Draw table ─────────────────────────────────────────────
-  const colW = [1.8, 2.1, 1.8, 1.8, 1.8];
-  const rowH = Math.min(0.3, 3.5 / tableRows.length);
+  const colW = [2.4, 2.8, 2.4, 2.4, 2.1];
+  const rowH = Math.min(0.35, 4.5 / tableRows.length);
 
   slide.addTable(tableRows, {
     x: MARGIN_X, y: CONTENT_TOP + 0.05, w: CONTENT_W,

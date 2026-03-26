@@ -1,9 +1,10 @@
 // ──────────────────────────────────────────────────────────────
 // Slide 2: Market Overview (maps to template slide 4)
 //
-// Top row   = KPI cards (Global Market Size, Biosimilar Penetration, Revenue Trend)
-// Middle    = Originator profile info
-// Bottom    = Market breakdown by geography (horizontal bar)
+// Layout (13.333 x 7.5"):
+//   Top row   = 3 KPI cards
+//   Middle    = Originator profile section
+//   Bottom    = Market breakdown by geography (horizontal bar chart)
 // ──────────────────────────────────────────────────────────────
 
 import type PptxGenJS from 'pptxgenjs';
@@ -12,7 +13,7 @@ import { formatPercent, formatCurrency } from '../../calculations';
 import {
   applyLayout, addSectionBox, addKpiCard, addLabelValue,
   MARGIN_X, CONTENT_TOP, CONTENT_W,
-  DARK_BLUE, MID_BLUE, FONT, GRAY,
+  NAVY, TEAL_BLUE, FONT, GRAY,
 } from './slideLayout';
 
 export function addMarketOverviewSlide(pptx: PptxGenJS, ctx: ExportContext): void {
@@ -24,32 +25,26 @@ export function addMarketOverviewSlide(pptx: PptxGenJS, ctx: ExportContext): voi
 
   if (countries.length === 0) {
     slide.addText('No countries configured', {
-      x: 1, y: 2.5, w: 8, h: 1,
+      x: 2, y: 3.5, w: 9, h: 1,
       fontSize: 14, fontFace: FONT, color: GRAY, align: 'center',
     });
     return;
   }
 
   // ── Compute KPIs ──────────────────────────────────────────
-  // Global market size at peak (sum of each country's peak market value)
   let globalPeakMarketValue = 0;
   for (const co of countryOutputs) {
     globalPeakMarketValue += Math.max(...co.totalMarketValue);
   }
 
-  // Avg biosimilar penetration at peak year across countries
   let totalBsPen = 0;
   let countBsPen = 0;
   for (const co of countryOutputs) {
     const peakBs = Math.max(...co.biosimilarShare);
-    if (peakBs > 0) {
-      totalBsPen += peakBs;
-      countBsPen++;
-    }
+    if (peakBs > 0) { totalBsPen += peakBs; countBsPen++; }
   }
   const avgBsPenetration = countBsPen > 0 ? totalBsPen / countBsPen : 0;
 
-  // Revenue trend: peak revenue
   let peakRevenue = 0;
   let peakRevenueYear = '';
   for (let i = 0; i < plOutputs.totalRevenue.length; i++) {
@@ -61,9 +56,9 @@ export function addMarketOverviewSlide(pptx: PptxGenJS, ctx: ExportContext): voi
 
   // ── KPI cards row ─────────────────────────────────────────
   const kpiY = CONTENT_TOP;
-  const kpiW = 2.9;
-  const kpiH = 0.75;
-  const kpiGap = 0.15;
+  const kpiW = 3.8;
+  const kpiH = 0.85;
+  const kpiGap = 0.20;
   const kpiStartX = MARGIN_X;
 
   addKpiCard(slide, kpiStartX, kpiY, kpiW, kpiH,
@@ -74,20 +69,18 @@ export function addMarketOverviewSlide(pptx: PptxGenJS, ctx: ExportContext): voi
     `Peak Revenue (${peakRevenueYear})`, formatCurrency(peakRevenue, ccy));
 
   // ── Originator profile ────────────────────────────────────
-  const profY = kpiY + kpiH + 0.15;
+  const profY = kpiY + kpiH + 0.20;
   const profW = CONTENT_W;
-  const profH = 0.8;
-  addSectionBox(slide, MARGIN_X, profY, profW, profH, 'Originator Profile');
+  addSectionBox(slide, MARGIN_X, profY, profW, 0.35, 'Originator Profile');
 
-  const pvX = MARGIN_X + 0.1;
-  const pvW = profW / 2 - 0.1;
-  let pvY = profY + 0.3;
+  const pvX = MARGIN_X + 0.15;
+  const pvW = profW / 2 - 0.15;
+  let pvY = profY + 0.40;
 
   addLabelValue(slide, pvX, pvY, pvW, 'Molecule', config.moleculeName || '-');
-  addLabelValue(slide, pvX + pvW + 0.1, pvY, pvW, 'Countries', String(countries.length));
-  pvY += 0.2;
+  addLabelValue(slide, pvX + pvW + 0.15, pvY, pvW, 'Countries', String(countries.length));
+  pvY += 0.28;
 
-  // Average originator ref price across countries
   let totalOrigPrice = 0;
   let origCount = 0;
   for (const co of countryOutputs) {
@@ -97,14 +90,14 @@ export function addMarketOverviewSlide(pptx: PptxGenJS, ctx: ExportContext): voi
   const avgOrigPrice = origCount > 0 ? totalOrigPrice / origCount : 0;
 
   addLabelValue(slide, pvX, pvY, pvW, 'Avg. Originator Price', formatCurrency(avgOrigPrice, ccy, 2));
-  addLabelValue(slide, pvX + pvW + 0.1, pvY, pvW, 'Model Period',
-    `${periodLabels[0]} - ${periodLabels[periodLabels.length - 1]}`);
+  addLabelValue(slide, pvX + pvW + 0.15, pvY, pvW, 'Model Period',
+    `${periodLabels[0]} \u2013 ${periodLabels[periodLabels.length - 1]}`);
 
   // ── Market breakdown by geography (horizontal bar chart) ──
-  const chartY = profY + profH + 0.15;
-  const chartH = 2.3;
+  const chartY = profY + 1.10;
+  const chartH = 6.85 - chartY;  // fill to just above footer
 
-  addSectionBox(slide, MARGIN_X, chartY, CONTENT_W, chartH, 'Market Breakdown by Geography');
+  addSectionBox(slide, MARGIN_X, chartY, CONTENT_W, 0.35, 'Market Breakdown by Geography');
 
   const geoNames = countries.map(c => c.name);
   const geoPeakValues = countryOutputs.map(co => Math.max(...co.totalMarketValue));
@@ -116,18 +109,18 @@ export function addMarketOverviewSlide(pptx: PptxGenJS, ctx: ExportContext): voi
   }];
 
   slide.addChart('bar', chartData, {
-    x: MARGIN_X + 0.1,
-    y: chartY + 0.35,
-    w: CONTENT_W - 0.2,
-    h: chartH - 0.5,
+    x: MARGIN_X + 0.15,
+    y: chartY + 0.45,
+    w: CONTENT_W - 0.30,
+    h: chartH - 0.60,
     barDir: 'bar',
-    chartColors: [MID_BLUE],
+    chartColors: [TEAL_BLUE],
     showLegend: false,
     showValue: true,
     dataLabelFontSize: 7,
-    dataLabelColor: DARK_BLUE,
+    dataLabelColor: NAVY,
     dataLabelPosition: 'outEnd',
-    catAxisLabelFontSize: 7,
+    catAxisLabelFontSize: 8,
     valAxisLabelFontSize: 7,
     showTitle: false,
   });

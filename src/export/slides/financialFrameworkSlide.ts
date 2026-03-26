@@ -1,10 +1,14 @@
 // ──────────────────────────────────────────────────────────────
 // Slide 6: Financial Framework (maps to template slide 13)
 //
-// Left   = Investment Parameters (section box with KV pairs)
-// Center = Sales Forecast bar chart
-// Right  = Program Attractiveness KPIs
-// Bottom = Program costs breakdown + milestones per partner table
+// Layout (13.333 x 7.5"):
+//   Top row — 3 columns:
+//     Left   = Investment Parameters (section + KV pairs)
+//     Center = Sales Forecast (bar chart)
+//     Right  = Program Attractiveness (KPI cards)
+//   Bottom row — 2 columns:
+//     Left   = Program Costs Breakdown (table)
+//     Right  = Milestones per Partner (table)
 // ──────────────────────────────────────────────────────────────
 
 import type PptxGenJS from 'pptxgenjs';
@@ -13,9 +17,9 @@ import { formatNumber, formatPercent, formatCurrency, getActiveRow } from '../..
 import {
   applyLayout, addSectionBox, addLabelValue, addKpiCard,
   MARGIN_X, CONTENT_TOP, CONTENT_W,
-  DARK_BLUE, MID_BLUE,
+  NAVY, TEAL_BLUE,
   TABLE_HDR, TABLE_HDR_R, tableCellOpts,
-  FONT, BLACK, WHITE,
+  FONT, VALUE_GRAY, WHITE,
 } from './slideLayout';
 
 export function addFinancialFrameworkSlide(pptx: PptxGenJS, ctx: ExportContext): void {
@@ -30,47 +34,43 @@ export function addFinancialFrameworkSlide(pptx: PptxGenJS, ctx: ExportContext):
   // ════════════════════════════════════════════════════════════
   // TOP ROW — 3 columns
   // ════════════════════════════════════════════════════════════
-  const colW = (CONTENT_W - 0.2) / 3;
+  const colGap = 0.15;
+  const colW = (CONTENT_W - 2 * colGap) / 3;
 
   // ── LEFT: Investment Parameters ────────────────────────────
   const leftX = MARGIN_X;
   const topY = CONTENT_TOP;
-  const topH = 2.2;
+  const topH = 2.6;
 
-  addSectionBox(slide, leftX, topY, colW, topH, 'Investment Parameters');
+  addSectionBox(slide, leftX, topY, colW, 0.35, 'Investment Parameters');
 
-  const kvX = leftX + 0.08;
-  const kvW = colW - 0.16;
-  let kvY = topY + 0.3;
+  const kvX = leftX + 0.12;
+  const kvW = colW - 0.24;
+  let kvY = topY + 0.45;
 
-  // Total program costs
   const totalOpEx = plOutputs.totalOpEx.reduce((a, b) => a + b, 0);
   addLabelValue(slide, kvX, kvY, kvW, 'Total Program Costs', formatCurrency(totalOpEx, ccy));
-  kvY += 0.2;
+  kvY += 0.28;
 
-  // Timeline
   addLabelValue(slide, kvX, kvY, kvW, 'Timeline',
-    `${periodLabels[0]} - ${periodLabels[periodLabels.length - 1]}`);
-  kvY += 0.2;
+    `${periodLabels[0]} \u2013 ${periodLabels[periodLabels.length - 1]}`);
+  kvY += 0.28;
 
-  // Geographies
   addLabelValue(slide, kvX, kvY, kvW, 'Geographies', String(countries.length));
-  kvY += 0.2;
+  kvY += 0.28;
 
   // Launch sequence
   const launches = countries
     .map(c => ({ name: c.name, yr: config.modelStartYear + c.biosimilarLaunchPeriodIndex }))
     .sort((a, b) => a.yr - b.yr);
   const launchSeqStr = launches.map(l => `${l.name} (${l.yr})`).join(', ');
-  addLabelValue(slide, kvX, kvY, kvW, 'Launch Sequence', '', { fontSize: 7 });
-  // Multi-line below label
+  addLabelValue(slide, kvX, kvY, kvW, 'Launch Sequence', '');
   slide.addText(launchSeqStr, {
-    x: kvX, y: kvY + 0.15, w: kvW, h: 0.35,
-    fontSize: 6.5, fontFace: FONT, color: BLACK, wrap: true,
+    x: kvX, y: kvY + 0.20, w: kvW, h: 0.40,
+    fontSize: 7, fontFace: FONT, color: VALUE_GRAY, wrap: true,
   });
-  kvY += 0.55;
+  kvY += 0.65;
 
-  // COGS
   if (config.cogsInputMethod === 'perGram') {
     addLabelValue(slide, kvX, kvY, kvW, 'API Cost/Gram', formatCurrency(config.apiCostPerGram, ccy, 2));
   } else {
@@ -78,11 +78,10 @@ export function addFinancialFrameworkSlide(pptx: PptxGenJS, ctx: ExportContext):
   }
 
   // ── CENTER: Sales Forecast bar chart ──────────────────────
-  const centerX = leftX + colW + 0.1;
+  const centerX = leftX + colW + colGap;
 
-  addSectionBox(slide, centerX, topY, colW, topH, 'Sales Forecast');
+  addSectionBox(slide, centerX, topY, colW, 0.35, 'Sales Forecast');
 
-  // Key years
   const step = periodLabels.length > 12 ? 2 : 1;
   const keyIdx: number[] = [];
   for (let i = 0; i < periodLabels.length; i += step) keyIdx.push(i);
@@ -92,14 +91,14 @@ export function addFinancialFrameworkSlide(pptx: PptxGenJS, ctx: ExportContext):
   const values = keyIdx.map(i => plOutputs.totalRevenue[i] ?? 0);
 
   slide.addChart('bar', [{ name: 'Revenue', labels, values }], {
-    x: centerX + 0.08, y: topY + 0.35, w: colW - 0.16, h: topH - 0.45,
+    x: centerX + 0.10, y: topY + 0.45, w: colW - 0.20, h: topH - 0.55,
     barGrouping: 'clustered',
-    chartColors: [MID_BLUE],
+    chartColors: [TEAL_BLUE],
     showLegend: false,
     showValue: false,
-    catAxisLabelFontSize: 5.5,
+    catAxisLabelFontSize: 6,
     catAxisLabelRotate: labels.length > 6 ? 45 : 0,
-    valAxisLabelFontSize: 5.5,
+    valAxisLabelFontSize: 6,
     catAxisOrientation: 'minMax',
     valAxisOrientation: 'minMax',
     valGridLine: { color: 'E8E8E8', size: 0.5 },
@@ -108,15 +107,15 @@ export function addFinancialFrameworkSlide(pptx: PptxGenJS, ctx: ExportContext):
   });
 
   // ── RIGHT: Program Attractiveness KPIs ─────────────────────
-  const rightX = centerX + colW + 0.1;
+  const rightX = centerX + colW + colGap;
 
-  addSectionBox(slide, rightX, topY, colW, topH, 'Program Attractiveness');
+  addSectionBox(slide, rightX, topY, colW, 0.35, 'Program Attractiveness');
 
-  const kpiX = rightX + 0.08;
-  const kpiW = colW - 0.16;
-  const kpiH = 0.55;
-  const kpiGap = 0.08;
-  let kpiY = topY + 0.3;
+  const kpiX = rightX + 0.12;
+  const kpiW = colW - 0.24;
+  const kpiH = 0.65;
+  const kpiGap = 0.10;
+  let kpiY = topY + 0.45;
 
   addKpiCard(slide, kpiX, kpiY, kpiW, kpiH, 'NPV', formatCurrency(npvOutputs.npv, ccy));
   kpiY += kpiH + kpiGap;
@@ -130,14 +129,14 @@ export function addFinancialFrameworkSlide(pptx: PptxGenJS, ctx: ExportContext):
       ? `${npvOutputs.paybackFromLaunchUndiscounted} yrs` : 'N/A');
 
   // ════════════════════════════════════════════════════════════
-  // BOTTOM ROW — Program costs breakdown + Milestones per partner
+  // BOTTOM ROW
   // ════════════════════════════════════════════════════════════
-  const bottomY = topY + topH + 0.15;
-  const bottomH = 2.0;
-  const halfW = (CONTENT_W - 0.1) / 2;
+  const bottomY = topY + topH + 0.20;
+  const bottomH = 6.80 - bottomY;  // fill to just above footer
+  const halfW = (CONTENT_W - colGap) / 2;
 
   // ── Left: Program Costs Breakdown ─────────────────────────
-  addSectionBox(slide, MARGIN_X, bottomY, halfW, bottomH, 'Program Costs Breakdown');
+  addSectionBox(slide, MARGIN_X, bottomY, halfW, 0.35, 'Program Costs Breakdown');
 
   const rAndD = getActiveRow(plAssumptions.rAndD, s);
   const commercial = getActiveRow(plAssumptions.commercialSales, s);
@@ -170,21 +169,20 @@ export function addFinancialFrameworkSlide(pptx: PptxGenJS, ctx: ExportContext):
     ]);
   });
 
-  const costRowH = Math.min(0.22, (bottomH - 0.35) / costRows.length);
+  const costRowH = Math.min(0.28, (bottomH - 0.45) / costRows.length);
 
   slide.addTable(costRows, {
-    x: MARGIN_X + 0.08, y: bottomY + 0.3, w: halfW - 0.16,
+    x: MARGIN_X + 0.10, y: bottomY + 0.40, w: halfW - 0.20,
     border: { type: 'solid', pt: 0.3, color: 'D9D9D9' },
-    colW: [(halfW - 0.16) * 0.6, (halfW - 0.16) * 0.4],
+    colW: [(halfW - 0.20) * 0.6, (halfW - 0.20) * 0.4],
     rowH: Array(costRows.length).fill(costRowH),
     autoPage: false,
   });
 
   // ── Right: Milestones per Partner ──────────────────────────
-  const rightBottomX = MARGIN_X + halfW + 0.1;
-  addSectionBox(slide, rightBottomX, bottomY, halfW, bottomH, 'Milestones per Partner');
+  const rightBottomX = MARGIN_X + halfW + colGap;
+  addSectionBox(slide, rightBottomX, bottomY, halfW, 0.35, 'Milestones per Partner');
 
-  // Build milestone summary per country
   const msHdr = [
     { text: 'Partner / Country', options: TABLE_HDR },
     { text: `Total Milestones (${ccy} '000)`, options: TABLE_HDR_R },
@@ -203,16 +201,16 @@ export function addFinancialFrameworkSlide(pptx: PptxGenJS, ctx: ExportContext):
 
   // Total row
   msRows.push([
-    { text: 'Total', options: { ...tableCellOpts(0, 'left'), bold: true, fill: { color: DARK_BLUE }, color: WHITE } },
-    { text: formatNumber(totalMilestones), options: { ...tableCellOpts(0, 'right'), bold: true, fill: { color: DARK_BLUE }, color: WHITE } },
+    { text: 'Total', options: { ...tableCellOpts(0, 'left'), bold: true, fill: { color: NAVY }, color: WHITE } },
+    { text: formatNumber(totalMilestones), options: { ...tableCellOpts(0, 'right'), bold: true, fill: { color: NAVY }, color: WHITE } },
   ]);
 
-  const msRowH = Math.min(0.22, (bottomH - 0.35) / msRows.length);
+  const msRowH = Math.min(0.28, (bottomH - 0.45) / msRows.length);
 
   slide.addTable(msRows, {
-    x: rightBottomX + 0.08, y: bottomY + 0.3, w: halfW - 0.16,
+    x: rightBottomX + 0.10, y: bottomY + 0.40, w: halfW - 0.20,
     border: { type: 'solid', pt: 0.3, color: 'D9D9D9' },
-    colW: [(halfW - 0.16) * 0.55, (halfW - 0.16) * 0.45],
+    colW: [(halfW - 0.20) * 0.55, (halfW - 0.20) * 0.45],
     rowH: Array(msRows.length).fill(msRowH),
     autoPage: false,
   });

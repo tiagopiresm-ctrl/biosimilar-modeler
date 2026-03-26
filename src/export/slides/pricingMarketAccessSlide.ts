@@ -1,9 +1,9 @@
 // ──────────────────────────────────────────────────────────────
 // Slide 4: Pricing & Market Access (maps to template slide 9)
 //
-// Table: Region | In-Market Price | Net Price (after GTN) |
-//        GTN % | Supply Price
-// Data from country model outputs at peak year.
+// Layout (13.333 x 7.5"):
+//   Table: Region | In-Market Price | Net Price | GTN% | Supply Price
+//   Below: clustered bar chart comparing Supply vs In-Market price
 // ──────────────────────────────────────────────────────────────
 
 import type PptxGenJS from 'pptxgenjs';
@@ -13,7 +13,7 @@ import {
   applyLayout,
   MARGIN_X, CONTENT_TOP, CONTENT_W,
   TABLE_HDR, TABLE_HDR_R, tableCellOpts,
-  DARK_BLUE, FONT, GRAY, MID_BLUE,
+  NAVY, TEAL_BLUE, FONT, GRAY,
 } from './slideLayout';
 
 export function addPricingMarketAccessSlide(pptx: PptxGenJS, ctx: ExportContext): void {
@@ -25,7 +25,7 @@ export function addPricingMarketAccessSlide(pptx: PptxGenJS, ctx: ExportContext)
 
   if (countries.length === 0) {
     slide.addText('No countries configured', {
-      x: 1, y: 2.5, w: 8, h: 1,
+      x: 2, y: 3.5, w: 9, h: 1,
       fontSize: 14, fontFace: FONT, color: GRAY, align: 'center',
     });
     return;
@@ -35,7 +35,7 @@ export function addPricingMarketAccessSlide(pptx: PptxGenJS, ctx: ExportContext)
   interface PricingRow {
     name: string;
     inMarketPrice: number;
-    netPrice: number;     // partner net selling price
+    netPrice: number;
     gtnPct: number;
     supplyPrice: number;
   }
@@ -46,7 +46,6 @@ export function addPricingMarketAccessSlide(pptx: PptxGenJS, ctx: ExportContext)
     const c = countries[ci];
     const co = countryOutputs[ci];
 
-    // Find peak revenue period
     let peakP = 0;
     let peakRev = 0;
     for (let p = 0; p < co.netSupplyRevenue.length; p++) {
@@ -93,8 +92,8 @@ export function addPricingMarketAccessSlide(pptx: PptxGenJS, ctx: ExportContext)
   }
 
   // ── Draw table ─────────────────────────────────────────────
-  const colW = [1.8, 2.0, 2.0, 1.5, 2.0];
-  const rowH = Math.min(0.3, 3.0 / tableRows.length);
+  const colW = [2.4, 2.6, 2.6, 2.0, 2.6];
+  const rowH = Math.min(0.35, 3.5 / tableRows.length);
 
   slide.addTable(tableRows, {
     x: MARGIN_X, y: CONTENT_TOP + 0.05, w: CONTENT_W,
@@ -104,9 +103,9 @@ export function addPricingMarketAccessSlide(pptx: PptxGenJS, ctx: ExportContext)
     autoPage: false,
   });
 
-  // ── Price waterfall mini-chart ─────────────────────────────
-  const chartY = CONTENT_TOP + 0.05 + tableRows.length * rowH + 0.3;
-  const chartH = Math.max(1.4, 4.8 - chartY);
+  // ── Price waterfall chart ─────────────────────────────────
+  const chartY = CONTENT_TOP + 0.05 + tableRows.length * rowH + 0.35;
+  const chartH = Math.max(1.8, 6.80 - chartY);
 
   const chartData = [{
     name: 'Supply Price',
@@ -124,12 +123,12 @@ export function addPricingMarketAccessSlide(pptx: PptxGenJS, ctx: ExportContext)
     w: CONTENT_W,
     h: chartH,
     barGrouping: 'clustered',
-    chartColors: [MID_BLUE, DARK_BLUE],
+    chartColors: [TEAL_BLUE, NAVY],
     showLegend: true,
     legendPos: 'b',
     legendFontSize: 7,
     showValue: false,
-    catAxisLabelFontSize: 7,
+    catAxisLabelFontSize: 8,
     valAxisLabelFontSize: 7,
     catAxisOrientation: 'minMax',
     valAxisOrientation: 'minMax',

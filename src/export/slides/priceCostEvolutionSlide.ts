@@ -1,8 +1,9 @@
 // ──────────────────────────────────────────────────────────────
 // Slide 5: Price vs Cost Evolution (maps to template slide 10)
 //
-// Top    = Line chart: Supply Price per Unit & COGS per Unit over time
-// Bottom = Table: Regional ASP by year + Gross margin trend row
+// Layout (13.333 x 7.5"):
+//   Top    = Line chart: Avg Supply Price/Unit & COGS/Unit
+//   Bottom = Table: Regional ASP by year + Gross margin row
 // ──────────────────────────────────────────────────────────────
 
 import type PptxGenJS from 'pptxgenjs';
@@ -12,7 +13,7 @@ import {
   applyLayout,
   MARGIN_X, CONTENT_TOP, CONTENT_W,
   TABLE_HDR, TABLE_HDR_R, tableCellOpts,
-  MID_BLUE,
+  TEAL_BLUE,
 } from './slideLayout';
 
 export function addPriceCostEvolutionSlide(pptx: PptxGenJS, ctx: ExportContext): void {
@@ -47,9 +48,9 @@ export function addPriceCostEvolutionSlide(pptx: PptxGenJS, ctx: ExportContext):
   const displayLabels = keyIdx.map(i => periodLabels[i]);
   const pick = (arr: number[]) => keyIdx.map(i => arr[i] ?? 0);
 
-  // ── Line chart: Supply Price vs COGS per unit ─────────────
+  // ── Line chart ────────────────────────────────────────────
   const chartY = CONTENT_TOP;
-  const chartH = 2.2;
+  const chartH = 2.8;
 
   const chartData = [
     { name: 'Avg. Supply Price/Unit', labels: displayLabels, values: pick(avgSupplyPrice) },
@@ -58,26 +59,26 @@ export function addPriceCostEvolutionSlide(pptx: PptxGenJS, ctx: ExportContext):
 
   slide.addChart('line', chartData, {
     x: MARGIN_X, y: chartY, w: CONTENT_W, h: chartH,
-    chartColors: [MID_BLUE, 'C00000'],
+    chartColors: [TEAL_BLUE, 'C00000'],
     lineSize: 2,
     showLegend: true,
     legendPos: 'b',
-    legendFontSize: 7,
+    legendFontSize: 8,
     showValue: false,
-    catAxisLabelFontSize: 6,
+    catAxisLabelFontSize: 7,
     catAxisLabelRotate: displayLabels.length > 10 ? 45 : 0,
-    valAxisLabelFontSize: 6,
+    valAxisLabelFontSize: 7,
     catAxisOrientation: 'minMax',
     valAxisOrientation: 'minMax',
     valGridLine: { color: 'E8E8E8', size: 0.5 },
     catGridLine: { style: 'none' },
     showTitle: false,
     lineDataSymbol: 'circle',
-    lineDataSymbolSize: 4,
+    lineDataSymbolSize: 5,
   });
 
   // ── Table: Regional ASP by year + Gross Margin ────────────
-  const tableY = chartY + chartH + 0.2;
+  const tableY = chartY + chartH + 0.25;
 
   const headerRow: object[] = [
     { text: '', options: TABLE_HDR },
@@ -87,7 +88,6 @@ export function addPriceCostEvolutionSlide(pptx: PptxGenJS, ctx: ExportContext):
   const tableRows: object[][] = [headerRow];
   let rowNum = 0;
 
-  // One row per country — average selling price per period
   for (let ci = 0; ci < countries.length; ci++) {
     const c = countries[ci];
     const co = countryOutputs[ci];
@@ -112,11 +112,11 @@ export function addPriceCostEvolutionSlide(pptx: PptxGenJS, ctx: ExportContext):
     })),
   ]);
 
-  const labelW = 1.4;
+  const labelW = 1.8;
   const remainW = CONTENT_W - labelW;
   const yrW = remainW / keyIdx.length;
   const colWidths = [labelW, ...keyIdx.map(() => yrW)];
-  const rowH = Math.min(0.25, 2.0 / tableRows.length);
+  const rowH = Math.min(0.30, 3.0 / tableRows.length);
 
   slide.addTable(tableRows, {
     x: MARGIN_X, y: tableY, w: CONTENT_W,

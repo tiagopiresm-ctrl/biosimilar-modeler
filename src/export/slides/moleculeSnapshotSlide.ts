@@ -1,74 +1,102 @@
 // ──────────────────────────────────────────────────────────────
 // Slide 1: Molecule Snapshot (maps to template slide 3)
 //
-// Left half  = Main Characteristics + Market Outlook + Financials
-//              + Program Attractiveness  (section boxes with KV pairs)
-// Right half = Sales Forecast bar chart (total revenue by year)
+// Layout matches template exactly:
+//   Left column (x=0.60..6.35):
+//     - Section: Main Characteristics (with vertical accent bar + KV pairs)
+//     - Section: Market Outlook (KV pairs + sales/volume mini-bar charts)
+//   Right column (x=6.70..12.70):
+//     - Section: High Level Timeline (year blocks + Gantt-style bars)
+//     - Section: Financials (program cost stacked bar)
+//     - Section: Program Attractiveness (NPV, Payback, IRR)
+//
+// All positions in inches, matching template EMU / 914400.
 // ──────────────────────────────────────────────────────────────
 
 import type PptxGenJS from 'pptxgenjs';
 import type { ExportContext } from '../exportTypes';
 import { formatNumber, formatPercent, formatCurrency } from '../../calculations';
 import {
-  applyLayout, addSectionBox, addLabelValue,
-  MARGIN_X, CONTENT_TOP, CONTENT_W, MID_BLUE,
+  applyLayout, addSectionBox, addVerticalAccent, addFootnote,
+  MARGIN_X, CONTENT_TOP,
+  NAVY, TEAL_BLUE, TEAL,
+  LABEL_NAVY, VALUE_GRAY, GRAY,
+  FONT, FS_LABEL, FS_SMALL, FS_MINI, FS_KPI_VAL,
 } from './slideLayout';
 
 export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): void {
   const slide = pptx.addSlide();
-  applyLayout(slide, 'Molecule Snapshot');
 
   const { config, countries, countryOutputs, plOutputs, npvOutputs, periodLabels } = ctx;
   const ccy = config.currency;
+  const molName = config.moleculeName || 'Biosimilar';
+
+  applyLayout(slide, `${molName} \u2014 Molecule Snapshot`,
+    'Requesting endorsement to proceed with biosimilar development');
 
   // ════════════════════════════════════════════════════════════
-  // LEFT HALF (x: MARGIN_X .. 4.65)
+  // LEFT COLUMN (x: 0.60 .. ~5.90)    — template positions
   // ════════════════════════════════════════════════════════════
-  const leftW = 4.3;
-  const leftX = MARGIN_X;
-  let curY = CONTENT_TOP;
+  const leftX = MARGIN_X;   // 0.60"
+  const leftW = 5.70;       // matches template
+  let curY = CONTENT_TOP;   // 1.15"
 
   // ── Section: Main Characteristics ──────────────────────────
-  const mainH = 1.1;
-  addSectionBox(slide, leftX, curY, leftW, mainH, 'Main Characteristics');
+  addSectionBox(slide, leftX, curY, leftW, 0.35, 'Main Characteristics');
+  curY += 0.45;
 
-  const kvX = leftX + 0.1;
-  const kvW = leftW - 0.2;
-  let kvY = curY + 0.3;
-  addLabelValue(slide, kvX, kvY, kvW, 'Product / Molecule', config.moleculeName || '-');
-  kvY += 0.2;
-  addLabelValue(slide, kvX, kvY, kvW, 'Model Currency', ccy);
-  kvY += 0.2;
+  // Vertical accent bar (0.04" wide, navy-teal, left edge)
+  const barX = 0.75;
+  const barStartY = curY;
+  const kvX = 0.95;   // labels start at 0.95"
+  const kvValX = 3.15; // values start at 3.15"
+  const kvLabelW = kvValX - kvX;  // ~2.20"
+  const kvValW = 3.00;
+  const rowH = 0.31;  // vertical spacing between rows
 
-  // LOE years
-  const loeStr = countries.map(c => `${c.name}: ${c.loeYear}`).join(', ');
-  addLabelValue(slide, kvX, kvY, kvW, 'LOE Years', loeStr || '-', { fontSize: 7 });
-  kvY += 0.2;
+  // LOE years string
+  const loeStr = countries.map(c => `${c.name}: ${c.loeYear}`).join('  |  ');
+  // Launch years string
+  const launchEntries = countries
+    .map(c => ({ name: c.name, yr: config.modelStartYear + c.biosimilarLaunchPeriodIndex }))
+    .sort((a, b) => a.yr - b.yr);
+  const launchStr = launchEntries.map(l => `${l.name}: ${l.yr}`).join('  |  ');
 
-  // Launch years
-  const launchStr = countries.map(c => {
-    const yr = config.modelStartYear + c.biosimilarLaunchPeriodIndex;
-    return `${c.name}: ${yr}`;
-  }).join(', ');
-  // not displayed in this section (space constraint) — move to Market Outlook
+  const mainKVs: [string, string][] = [
+    ['Product / Molecule:', molName],
+    ['Model Currency:', ccy],
+    ['LOE Years:', loeStr || '-'],
+    ['Countries Modeled:', String(countries.length)],
+    ['Launch Years:', launchStr || '-'],
+    ['Model Period:', `${periodLabels[0]} \u2013 ${periodLabels[periodLabels.length - 1]}`],
+  ];
 
-  curY += mainH + 0.08;
+  mainKVs.forEach(([label, value], i) => {
+    const y = curY + i * rowH;
+    slide.addText(label, {
+      x: kvX, y, w: kvLabelW, h: 0.26,
+      fontSize: FS_LABEL, fontFace: FONT, bold: true, color: LABEL_NAVY,
+    });
+    slide.addText(value, {
+      x: kvValX, y, w: kvValW, h: 0.26,
+      fontSize: FS_LABEL, fontFace: FONT, color: VALUE_GRAY,
+    });
+  });
+
+  const barEndY = curY + mainKVs.length * rowH;
+  addVerticalAccent(slide, barX, barStartY, barEndY - barStartY);
+
+  curY = barEndY + 0.20;
 
   // ── Section: Market Outlook ────────────────────────────────
-  const mktH = 0.9;
-  addSectionBox(slide, leftX, curY, leftW, mktH, 'Market Outlook');
+  addSectionBox(slide, leftX, curY, leftW, 0.35, 'Market Outlook');
+  curY += 0.40;
 
-  kvY = curY + 0.3;
-
-  // Global market volume at peak (sum across countries)
+  // Compute global metrics
   let globalPeakVol = 0;
   for (const co of countryOutputs) {
     globalPeakVol += Math.max(...co.marketVolume);
   }
-  addLabelValue(slide, kvX, kvY, kvW, 'Global Peak Market Vol.', formatNumber(globalPeakVol));
-  kvY += 0.2;
-
-  // Weighted average in-market price
   let totalSales = 0;
   let totalVol = 0;
   for (const co of countryOutputs) {
@@ -77,81 +105,189 @@ export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): v
       totalVol += co.biosimilarVolume[p];
     }
   }
-  const avgPrice = totalVol > 0 ? (totalSales / totalVol) * 1000 : 0; // sales in '000
-  addLabelValue(slide, kvX, kvY, kvW, 'Avg. In-Market Price', formatCurrency(avgPrice, ccy, 2));
-  kvY += 0.2;
+  const avgPrice = totalVol > 0 ? (totalSales / totalVol) * 1000 : 0;
 
-  addLabelValue(slide, kvX, kvY, kvW, 'Countries Modeled', String(countries.length));
-
-  curY += mktH + 0.08;
-
-  // ── Section: Financials ────────────────────────────────────
-  const finH = 0.7;
-  addSectionBox(slide, leftX, curY, leftW, finH, 'Financials');
-
-  kvY = curY + 0.3;
-
-  // Total program costs (sum of all OpEx across periods)
-  const totalOpExSum = plOutputs.totalOpEx.reduce((a, b) => a + b, 0);
-  addLabelValue(slide, kvX, kvY, kvW, 'Total Program Costs', formatCurrency(totalOpExSum, ccy));
-  kvY += 0.2;
-
-  // Launch years summary
-  addLabelValue(slide, kvX, kvY, kvW, 'Launch Years', launchStr || '-', { fontSize: 7 });
-
-  curY += finH + 0.08;
-
-  // ── Section: Program Attractiveness ────────────────────────
-  const progH = 0.9;
-  addSectionBox(slide, leftX, curY, leftW, progH, 'Program Attractiveness');
-
-  kvY = curY + 0.3;
-  addLabelValue(slide, kvX, kvY, kvW, 'NPV', formatCurrency(npvOutputs.npv, ccy));
-  kvY += 0.2;
-  addLabelValue(slide, kvX, kvY, kvW, 'Payback from Launch',
-    npvOutputs.paybackFromLaunchUndiscounted != null
-      ? `${npvOutputs.paybackFromLaunchUndiscounted} years` : 'N/A');
-  kvY += 0.2;
-  addLabelValue(slide, kvX, kvY, kvW, 'IRR',
-    npvOutputs.irr != null ? formatPercent(npvOutputs.irr) : 'N/A');
-
-  // ════════════════════════════════════════════════════════════
-  // RIGHT HALF — Sales Forecast bar chart
-  // ════════════════════════════════════════════════════════════
-  const chartX = 5.0;
-  const chartY = CONTENT_TOP;
-  const chartW = CONTENT_W - (chartX - MARGIN_X);
-  const chartH = 4.0;
-
-  // Section label
-  addSectionBox(slide, chartX, chartY, chartW, chartH, 'Sales Forecast');
-
-  // Pick key years to avoid crowding
-  const keyIdx: number[] = [];
-  for (let i = 0; i < periodLabels.length; i++) {
-    if (i === 0 || i === periodLabels.length - 1 || i % 2 === 0) keyIdx.push(i);
+  // Global market size (sum of peak market value per country)
+  let globalPeakMarketValue = 0;
+  for (const co of countryOutputs) {
+    globalPeakMarketValue += Math.max(...co.totalMarketValue);
   }
-  const uniq = [...new Set(keyIdx)].sort((a, b) => a - b);
-  const labels = uniq.map(i => periodLabels[i]);
-  const toK = (arr: number[]) => uniq.map(i => (arr[i] ?? 0));
 
-  const chartData = [
-    { name: `Revenue (${ccy} '000)`, labels, values: toK(plOutputs.totalRevenue) },
+  const mktKVs: [string, string][] = [
+    [`Global market size (${ccy} '000):`, formatNumber(globalPeakMarketValue)],
+    [`Global in-market price, ${ccy}:`, formatCurrency(avgPrice, '', 0)],
+    ['Countries modeled:', String(countries.length)],
   ];
 
-  slide.addChart('bar', chartData, {
-    x: chartX + 0.1, y: chartY + 0.35, w: chartW - 0.2, h: chartH - 0.5,
-    barGrouping: 'clustered',
-    chartColors: [MID_BLUE],
-    showLegend: false,
-    showValue: false,
-    catAxisLabelFontSize: 6,
-    catAxisLabelRotate: labels.length > 8 ? 45 : 0,
-    valAxisLabelFontSize: 6,
-    catAxisOrientation: 'minMax',
-    valAxisOrientation: 'minMax',
-    valGridLine: { color: 'E8E8E8', size: 0.5 },
-    catGridLine: { style: 'none' },
-    showTitle: false,
+  mktKVs.forEach(([label, value], i) => {
+    const y = curY + i * 0.22;
+    slide.addText(label, {
+      x: 0.75, y, w: 2.80, h: 0.20,
+      fontSize: FS_SMALL, fontFace: FONT, bold: true, color: LABEL_NAVY,
+    });
+    slide.addText(value, {
+      x: 3.60, y, w: 2.30, h: 0.20,
+      fontSize: FS_SMALL, fontFace: FONT, color: VALUE_GRAY,
+    });
   });
+
+  curY += mktKVs.length * 0.22 + 0.10;
+
+  // ── Mini sales forecast bar chart (template style: teal bars) ──
+  slide.addText(`mAbx sales forecast (${ccy} '000)`, {
+    x: 0.75, y: curY, w: 3.50, h: 0.16,
+    fontSize: FS_MINI, fontFace: FONT, bold: true, color: LABEL_NAVY,
+  });
+  curY += 0.20;
+
+  // Pick up to 8 key periods for the mini chart
+  const maxBars = 8;
+  const step = Math.max(1, Math.ceil(periodLabels.length / maxBars));
+  const keyIdx: number[] = [];
+  for (let i = 0; i < periodLabels.length; i += step) keyIdx.push(i);
+  if (keyIdx.length > 0 && keyIdx[keyIdx.length - 1] !== periodLabels.length - 1) {
+    keyIdx.push(periodLabels.length - 1);
+  }
+  const barLabels = keyIdx.map(i => periodLabels[i]);
+  const barValues = keyIdx.map(i => plOutputs.totalRevenue[i] ?? 0);
+
+  // Draw simple mini-bar chart with text shapes (matching template style)
+  const barChartX = 0.75;
+  const barChartW = 4.96;  // ~8 bars * 0.62"
+  const barMaxH = 0.35;
+  const barW = Math.min(0.55, barChartW / barLabels.length - 0.08);
+  const barSpacing = barChartW / barLabels.length;
+  const maxVal = Math.max(...barValues, 1);
+
+  const barBaseY = curY + barMaxH + 0.15;
+
+  barLabels.forEach((lbl, i) => {
+    const val = barValues[i];
+    const bH = Math.max(0.04, (val / maxVal) * barMaxH);
+    const bX = barChartX + i * barSpacing;
+    const bY = barBaseY - bH;
+
+    // Bar rect
+    slide.addShape('rect', {
+      x: bX, y: bY, w: barW, h: bH,
+      fill: { color: TEAL },
+    });
+    // Value label above bar
+    slide.addText(formatNumber(val), {
+      x: bX, y: bY - 0.14, w: barW, h: 0.12,
+      fontSize: 6, fontFace: FONT, color: VALUE_GRAY, align: 'center',
+    });
+    // Year label below bar
+    slide.addText(lbl, {
+      x: bX, y: barBaseY + 0.02, w: barW, h: 0.12,
+      fontSize: 6, fontFace: FONT, color: VALUE_GRAY, align: 'center',
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════
+  // RIGHT COLUMN (x: 6.70 .. 12.70)
+  // ════════════════════════════════════════════════════════════
+  const rightX = 6.70;
+  const rightW = 6.00;
+  let rightY = CONTENT_TOP;
+
+  // ── Section: High Level Timeline ───────────────────────────
+  addSectionBox(slide, rightX, rightY, rightW, 0.35, 'High Level Timeline');
+  rightY += 0.40;
+
+  // Year blocks across top
+  const timelineYears = launchEntries.length > 0
+    ? Array.from(
+        { length: Math.min(6, periodLabels.length) },
+        (_, i) => periodLabels[i],
+      )
+    : periodLabels.slice(0, 6);
+
+  const yearBlockW = 0.77;
+  const yearBlockH = 0.22;
+  const yearStartX = 7.80;
+
+  timelineYears.forEach((yr, i) => {
+    const bx = yearStartX + i * yearBlockW;
+    slide.addShape('rect', {
+      x: bx, y: rightY, w: yearBlockW, h: yearBlockH,
+      fill: { color: i % 2 === 0 ? TEAL_BLUE : NAVY },
+    });
+    slide.addText(yr, {
+      x: bx, y: rightY + 0.01, w: yearBlockW, h: 0.20,
+      fontSize: 7, fontFace: FONT, bold: true, color: 'FFFFFF',
+      align: 'center',
+    });
+  });
+
+  rightY += yearBlockH + 0.15;
+
+  // Development phase bars (simplified Gantt)
+  const phases = [
+    'Analytical & Process Dev',
+    'Scale-up & GMP',
+    'Validation',
+    'Clinical',
+    'Regulatory',
+  ];
+  const phaseColors = [TEAL_BLUE, '5B9BD5', '17A2B8', '5B9BD5', TEAL_BLUE];
+  const phaseBarW = [1.15, 1.15, 0.92, 1.53, 1.15];
+
+  phases.forEach((phase, i) => {
+    // Phase label
+    slide.addText(phase, {
+      x: rightX, y: rightY, w: 1.10, h: 0.35,
+      fontSize: 7, fontFace: FONT, color: VALUE_GRAY, wrap: true,
+    });
+    // Phase bar (staggered offset to show sequence)
+    const barOffset = i * 0.77;
+    slide.addShape('rect', {
+      x: yearStartX + barOffset, y: rightY + 0.06, w: phaseBarW[i], h: 0.22,
+      fill: { color: phaseColors[i] },
+    });
+    rightY += 0.35;
+  });
+
+  rightY += 0.20;
+
+  // ── Section: Financials ────────────────────────────────────
+  addSectionBox(slide, rightX, rightY, rightW, 0.35, 'Financials');
+  rightY += 0.40;
+
+  // Total program costs
+  const totalOpExSum = plOutputs.totalOpEx.reduce((a, b) => a + b, 0);
+  slide.addText(`Program costs: ${formatCurrency(totalOpExSum, ccy)}`, {
+    x: 6.85, y: rightY, w: 3.00, h: 0.20,
+    fontSize: FS_KPI_VAL, fontFace: FONT, bold: true, color: LABEL_NAVY,
+  });
+
+  rightY += 0.50;
+
+  // ── Section: Program Attractiveness ────────────────────────
+  addSectionBox(slide, rightX, rightY, rightW, 0.35, 'Program Attractiveness');
+  rightY += 0.40;
+
+  // NPV | Payback | IRR — in a row (matching template)
+  const kpiPairs: [string, string][] = [
+    ['NPV:', formatCurrency(npvOutputs.npv, ccy)],
+    ['Payback:', npvOutputs.paybackFromLaunchUndiscounted != null
+      ? `${npvOutputs.paybackFromLaunchUndiscounted} yrs` : 'N/A'],
+    ['IRR:', npvOutputs.irr != null ? formatPercent(npvOutputs.irr) : 'N/A'],
+  ];
+
+  const kpiSpacing = 1.75;
+  kpiPairs.forEach(([label, value], i) => {
+    const kx = 6.85 + i * kpiSpacing;
+    slide.addText(label, {
+      x: kx, y: rightY, w: 0.80, h: 0.18,
+      fontSize: FS_SMALL, fontFace: FONT, bold: true, color: GRAY,
+    });
+    slide.addText(value, {
+      x: kx + 0.75, y: rightY, w: 1.00, h: 0.18,
+      fontSize: FS_LABEL, fontFace: FONT, bold: true, color: LABEL_NAVY,
+    });
+  });
+
+  // Footnote
+  addFootnote(slide, `NPV from signature till end of model period  |  Source: Model outputs  |  ${ccy} '000`);
 }
