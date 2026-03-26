@@ -380,7 +380,7 @@ function buildCountryModelSheet(
   writeFormulaRow(ws, row, 'Royalty Income', NP, (p) => {
     const flat = cellMap.get(sheetKey, 'royaltyFlat', p).toLocal();
     const tiered = cellMap.get(sheetKey, 'royaltyTiered', p).toLocal();
-    return `IF(${useFixedRef}=1,${flat},${tiered})`;
+    return `IF(${useFixedRef}="Yes",${flat},${tiered})`;
   }, co.royaltyIncome, cellMap, sheetKey, 'royaltyIncome', NUM_FMT.integer);
   row++;
 

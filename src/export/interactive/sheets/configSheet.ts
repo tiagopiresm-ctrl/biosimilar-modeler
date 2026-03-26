@@ -87,9 +87,25 @@ export function addInteractiveConfigSheet(
 
   // Row 6: Currency
   writeKV(6, 'Currency', config.currency);
+  ws.getCell(6, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"€,$,£,¥,CHF"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
   // Row 7: Scenario Mode
   writeKV(7, 'Scenario Mode', config.scenarioMode);
+  ws.getCell(7, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"Three Scenario,Base Only"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
   // Row 8: blank
 
@@ -120,10 +136,26 @@ export function addInteractiveConfigSheet(
   // Row 16: API Pricing Model
   writeKV(16, 'API Pricing Model', config.apiPricingModel);
   cellMap.registerScalar('config', 'apiPricingModel', 'Config', 'B16');
+  ws.getCell(16, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"Percentage of Partner Net Price,Fixed Price per Gram"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
   // Row 17: COGS Input Method
   writeKV(17, 'COGS Input Method', config.cogsInputMethod ?? 'perGram');
   cellMap.registerScalar('config', 'cogsInputMethod', 'Config', 'B17');
+  ws.getCell(17, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"API (per gram),Standard Units (per unit)"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
   // Row 18: Units per Gram of API
   writeKV(18, 'Units per Gram of API', config.unitsPerGramOfAPI, NUM_FMT.decimal2);
@@ -160,6 +192,14 @@ export function addInteractiveConfigSheet(
 
   // Row 27: Forecast Method
   writeKV(27, 'Forecast Method', config.volumeForecastMethod);
+  ws.getCell(27, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"Growth % YoY,ATC Market Share %"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
 
   // Row 28: Volume Multiplier
   writeKV(28, 'Volume Multiplier', config.volumeMultiplier);

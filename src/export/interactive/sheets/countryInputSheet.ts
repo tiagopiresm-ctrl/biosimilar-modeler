@@ -261,8 +261,16 @@ function buildCountrySheet(
   writeSection(ws, row, 'Royalty Structure', colCount);
   row++;
 
-  // Use Fixed Royalty Rate (toggle)
-  writeScalarRow(ws, row, 'Use Fixed Royalty Rate (1=Yes, 0=No)', country.useFixedRoyaltyRate ? 1 : 0, cellMap, sheetKey, 'useFixedRoyaltyRate', NUM_FMT.integer);
+  // Use Fixed Royalty Rate (dropdown)
+  writeScalarRow(ws, row, 'Use Fixed Royalty Rate', country.useFixedRoyaltyRate ? 'Yes' : 'No', cellMap, sheetKey, 'useFixedRoyaltyRate');
+  ws.getCell(row, 2).dataValidation = {
+    type: 'list',
+    allowBlank: false,
+    formulae: ['"Yes,No"'],
+    showErrorMessage: true,
+    errorTitle: 'Invalid',
+    error: 'Please select from the dropdown',
+  };
   row++;
 
   // Tier thresholds and rates (5 tiers)

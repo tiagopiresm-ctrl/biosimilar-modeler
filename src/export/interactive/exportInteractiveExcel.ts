@@ -26,7 +26,6 @@ import { addChartsDataSheet } from './sheets/chartsSheet';
 
 // Power BI sheets
 import { addPBIDataSheet } from './sheets/pbiDataSheet';
-import { addPBIGuideSheet } from './sheets/pbiGuideSheet';
 
 /**
  * Generate and download an interactive Excel workbook with live formulas.
@@ -57,7 +56,6 @@ export async function exportInteractiveExcel(ctx: ExportContext): Promise<void> 
 
   // ── Phase 3: Power BI sheets ──
   addPBIDataSheet(wb, ctx);
-  addPBIGuideSheet(wb);
 
   // ── Phase 4: Protect output sheets ──
   const outputSheetNames = [

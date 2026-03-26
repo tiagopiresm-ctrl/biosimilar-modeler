@@ -94,25 +94,6 @@ export function addChartsDataSheet(
     row++;
   };
 
-  // ── Helper: write a static data row (no formula) ──
-  const writeStaticDataRow = (
-    label: string,
-    values: number[],
-    numFmt: string,
-    bold: boolean = false,
-  ) => {
-    const c1 = ws.getCell(row, 1);
-    c1.value = label;
-    c1.font = bold ? BOLD_VALUE_FONT : LABEL_FONT;
-
-    for (let p = 0; p < NP; p++) {
-      const cell = ws.getCell(row, p + 2);
-      cell.value = values[p] ?? 0;
-      cell.numFmt = numFmt;
-      if (bold) cell.font = BOLD_VALUE_FONT;
-    }
-    row++;
-  };
 
   // ── Instruction row ──
   const instrCell = ws.getCell(row, 1);
@@ -128,7 +109,7 @@ export function addChartsDataSheet(
   writeTitle('Chart 1: Market & Biosimilar Volumes (Line Chart)');
   writePeriodRow();
 
-  // Aggregate across countries
+  // Aggregate across countries (cached values for formula results)
   const totalMarketVolume = new Array(NP).fill(0);
   const totalOriginatorVolume = new Array(NP).fill(0);
   const totalBiosimilarVolume = new Array(NP).fill(0);
@@ -144,10 +125,39 @@ export function addChartsDataSheet(
     }
   }
 
-  writeStaticDataRow('Total Market Volume', totalMarketVolume, NUM_FMT.integer, true);
-  writeStaticDataRow('Originator Volume', totalOriginatorVolume, NUM_FMT.integer);
-  writeStaticDataRow('Total Biosimilar Volume', totalBiosimilarVolume, NUM_FMT.integer);
-  writeStaticDataRow('Our Product Volume', ourProductVolume, NUM_FMT.integer);
+  // Use SUM formulas referencing country model sheets for live updates
+  const writeAggregateRow = (
+    label: string,
+    fieldName: string,
+    cachedValues: number[],
+    numFmt: string,
+    bold: boolean = false,
+  ) => {
+    const c1 = ws.getCell(row, 1);
+    c1.value = label;
+    c1.font = bold ? BOLD_VALUE_FONT : LABEL_FONT;
+
+    for (let p = 0; p < NP; p++) {
+      const cell = ws.getCell(row, p + 2);
+      try {
+        const refs = countries.map((_, ci) =>
+          cellMap.get(`countryModel_${ci}`, fieldName, p).toFormula(),
+        );
+        const formula = refs.length === 1 ? refs[0] : refs.join('+');
+        cell.value = { formula, result: cachedValues[p] ?? 0 };
+      } catch {
+        cell.value = cachedValues[p] ?? 0;
+      }
+      cell.numFmt = numFmt;
+      if (bold) cell.font = BOLD_VALUE_FONT;
+    }
+    row++;
+  };
+
+  writeAggregateRow('Total Market Volume', 'marketVolume', totalMarketVolume, NUM_FMT.integer, true);
+  writeAggregateRow('Originator Volume', 'originatorVolume', totalOriginatorVolume, NUM_FMT.integer);
+  writeAggregateRow('Total Biosimilar Volume', 'totalBiosimilarVolume', totalBiosimilarVolume, NUM_FMT.integer);
+  writeAggregateRow('Our Product Volume', 'biosimilarVolume', ourProductVolume, NUM_FMT.integer);
   row++;
 
   // ════════════════════════════════════════════════════════════
@@ -195,7 +205,7 @@ export function addChartsDataSheet(
     const co = countryOutputs[ci];
     const fxRates = countries[ci].fxRate;
 
-    // Total country revenue = supply + royalty + milestones, FX-converted
+    // Total country revenue = supply + royalty + milestones, FX-converted (cached values)
     const countryRevenue = new Array(NP).fill(0);
     for (let p = 0; p < NP; p++) {
       const fx = fxRates[p] ?? 1;
@@ -204,14 +214,32 @@ export function addChartsDataSheet(
       const milestones = co.milestoneIncome[p] ?? 0;
 
       if (config.apiPricingModel === 'percentage') {
-        // FX-convert supply and royalty (milestones already in model currency)
         countryRevenue[p] = (fx !== 0 ? supply / fx : 0) + (fx !== 0 ? royalty / fx : 0) + milestones;
       } else {
         countryRevenue[p] = supply + (fx !== 0 ? royalty / fx : 0) + milestones;
       }
     }
 
-    writeStaticDataRow(`Revenue — ${countryName}`, countryRevenue, NUM_FMT.integer);
+    // Use formula referencing the P&L per-country supply revenue row
+    const c1 = ws.getCell(row, 1);
+    c1.value = `Revenue — ${countryName}`;
+    c1.font = LABEL_FONT;
+
+    for (let p = 0; p < NP; p++) {
+      const cell = ws.getCell(row, p + 2);
+      try {
+        const supplyRef = cellMap.get('pl', `supplyRevByCountry_${ci}`, p).toFormula();
+        const royaltyRef = cellMap.get(`countryModel_${ci}`, 'royaltyIncome', p).toFormula();
+        const fxRef = cellMap.get(`countryModel_${ci}`, 'fxRate', p).toFormula();
+        const milestoneRef = cellMap.get(`countryModel_${ci}`, 'milestoneIncome', p).toFormula();
+        const formula = `${supplyRef}+IFERROR(${royaltyRef}/${fxRef},0)+${milestoneRef}`;
+        cell.value = { formula, result: countryRevenue[p] ?? 0 };
+      } catch {
+        cell.value = countryRevenue[p] ?? 0;
+      }
+      cell.numFmt = NUM_FMT.integer;
+    }
+    row++;
   }
 
   // Total across countries
