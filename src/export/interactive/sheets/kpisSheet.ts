@@ -1,8 +1,8 @@
 // ──────────────────────────────────────────────────────────────
 // Interactive Excel — KPIs (output) sheet builder
 // ──────────────────────────────────────────────────────────────
-// Simple label-value layout referencing NPV, WACC, and
-// Decision Tree sheets. No period columns.
+// Simple label-value layout referencing NPV Analysis and Config.
+// No period columns.
 // ──────────────────────────────────────────────────────────────
 
 import type { Workbook } from 'exceljs';
@@ -21,7 +21,7 @@ export function addInteractiveKPIsSheet(
 ): void {
   const ws = wb.addWorksheet('KPIs');
   const sheetKey = 'kpis';
-  const { npvOutputs, dtOutputs } = ctx;
+  const { npvOutputs } = ctx;
 
   // Column widths
   ws.getColumn(1).width = 35;
@@ -105,27 +105,6 @@ export function addInteractiveKPIsSheet(
   writeKpiFormula(row, 'rNPV', rnpvRef, npvOutputs.rnpv, NUM_FMT.integer, 'rnpv');
   row++;
 
-  // eNPV = NPV * Decision Tree cumulative PoS
-  const dtPosRef = cellMap.getScalar('decisionTree', 'cumulativePoS').toFormula();
-  const npvKpiRef = cellAddr(row - 2, 2); // reference the NPV cell we just wrote
-  writeKpiFormula(
-    row, 'eNPV',
-    `${npvKpiRef}*${dtPosRef}`,
-    dtOutputs.enpv,
-    NUM_FMT.integer, 'enpv',
-  );
-  row++;
-
-  // eNPV from rNPV
-  const rnpvKpiRef = cellAddr(row - 2, 2); // reference the rNPV cell
-  writeKpiFormula(
-    row, 'eNPV (from rNPV)',
-    `${rnpvKpiRef}*${dtPosRef}`,
-    dtOutputs.enpvFromRnpv,
-    NUM_FMT.integer, 'enpvFromRnpv',
-  );
-  row++;
-
   // Blank
   row++;
 
@@ -140,13 +119,8 @@ export function addInteractiveKPIsSheet(
   writeKpiFormula(row, 'IRR', irrRef, npvOutputs.irr ?? 0, NUM_FMT.percent, 'irr');
   row++;
 
-  // rIRR
-  const rirrRef = cellMap.getScalar('npv', 'rirr').toFormula();
-  writeKpiFormula(row, 'rIRR', rirrRef, npvOutputs.rirr ?? 0, NUM_FMT.percent, 'rirr');
-  row++;
-
   // WACC
-  const waccRef = cellMap.getScalar('wacc', 'activeWACC').toFormula();
+  const waccRef = cellMap.getScalar('config', 'wacc').toFormula();
   writeKpiFormula(row, 'WACC', waccRef, ctx.waccOutputs.activeWACC, NUM_FMT.percent, 'wacc');
   row++;
 
@@ -159,18 +133,9 @@ export function addInteractiveKPIsSheet(
   section(row, 'Risk & Timing');
   row++;
 
-  // Cumulative PoS
-  writeKpiFormula(row, 'Cumulative PoS', dtPosRef, dtOutputs.cumulativePoS, NUM_FMT.percent, 'cumulativePoS');
-  row++;
-
   // Money at Risk
   const marRef = cellMap.getScalar('npv', 'moneyAtRisk').toFormula();
   writeKpiFormula(row, 'Money at Risk', marRef, npvOutputs.moneyAtRisk, NUM_FMT.integer, 'moneyAtRisk');
-  row++;
-
-  // Funding Need
-  const fnRef = cellMap.getScalar('npv', 'fundingNeed').toFormula();
-  writeKpiFormula(row, 'Funding Need', fnRef, npvOutputs.fundingNeed, NUM_FMT.integer, 'fundingNeed');
   row++;
 
   // Blank
@@ -192,16 +157,6 @@ export function addInteractiveKPIsSheet(
   writeKpiFormula(row, 'Payback Year (Discounted)', pbdRef, npvOutputs.paybackDiscounted ?? 'N/A', NUM_FMT.year, 'paybackDiscounted');
   row++;
 
-  // Payback from Launch (years)
-  const pbFromLaunchRef = cellMap.getScalar('npv', 'paybackFromLaunch').toFormula();
-  writeKpiFormula(row, 'Payback from Launch (years)', pbFromLaunchRef, npvOutputs.paybackFromLaunchUndiscounted ?? 'N/A', NUM_FMT.decimal2, 'paybackFromLaunch');
-  row++;
-
-  // Discounted Payback from Launch (years)
-  const dpbFromLaunchRef = cellMap.getScalar('npv', 'discountedPaybackFromLaunch').toFormula();
-  writeKpiFormula(row, 'Disc. Payback from Launch (years)', dpbFromLaunchRef, npvOutputs.discountedPaybackFromLaunch ?? 'N/A', NUM_FMT.decimal2, 'discPaybackFromLaunch');
-  row++;
-
   // Blank
   row++;
 
@@ -211,11 +166,9 @@ export function addInteractiveKPIsSheet(
   section(row, 'Peak Performance');
   row++;
 
-  // Peak EBIT (cached value)
   writeKpiValue(row, 'Peak EBIT', npvOutputs.peakEbitValue, NUM_FMT.integer, 'peakEbit');
   row++;
 
-  // Peak EBIT Year (cached value)
   writeKpiValue(row, 'Peak EBIT Year', npvOutputs.peakEbitYear, NUM_FMT.year, 'peakEbitYear');
   row++;
 

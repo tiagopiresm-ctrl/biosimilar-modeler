@@ -1,9 +1,9 @@
 // ──────────────────────────────────────────────────────────────
-// Interactive Excel — P&L (output) sheet builder (10-slot version)
+// Interactive Excel — P&L (output) sheet — Clean standalone
 // ──────────────────────────────────────────────────────────────
-// Aggregates across all 10 country model slots into a consolidated P&L.
-// Inactive slots contribute 0 (their model sheets already return 0).
-// All cells use formulaValue — no editable inputs.
+// Aggregates across ACTIVE countries only into a consolidated P&L.
+// All cells are formulas. No mode switches — supply revenue is
+// always OurVol x SupplyPrice, already resolved in Calculations.
 // ──────────────────────────────────────────────────────────────
 
 import type { Workbook } from 'exceljs';
@@ -12,13 +12,10 @@ import type { CellMap } from '../cellMap';
 import { getEarliestLoeIndex } from '../../../types';
 import { NUM_FMT } from '../../excelStyles';
 import {
-  writeFormulaRow, writeSection,
+  writeFormulaRow, writeInputRow, writeSection,
   setupSheet, writePeriodHeader,
 } from '../formulaHelpers';
-import { MAX_COUNTRY_SLOTS } from './configSheet';
-
-/** Generate array [0, 1, 2, ..., MAX_COUNTRY_SLOTS-1] for iteration. */
-const SLOT_INDICES = Array.from({ length: MAX_COUNTRY_SLOTS }, (_, i) => i);
+import { getActiveRow } from '../../../calculations';
 
 export function addInteractivePLSheet(
   wb: Workbook,
@@ -27,11 +24,15 @@ export function addInteractivePLSheet(
 ): void {
   const ws = wb.addWorksheet('P&L');
   const sheetKey = 'pl';
-  const { countries, plOutputs, periodLabels, periodConfig } = ctx;
+  const { countries, plOutputs, periodLabels, periodConfig, config } = ctx;
 
   const NP = periodLabels.length;
   const colCount = NP + 1;
+  const numCountries = countries.length;
   const earliestLoeIdx = getEarliestLoeIndex(countries, periodConfig.startYear);
+
+  // Generate array of active country indices
+  const SLOT_INDICES = Array.from({ length: numCountries }, (_, i) => i);
 
   setupSheet(ws, NP);
   writePeriodHeader(ws, periodLabels);
@@ -44,27 +45,21 @@ export function addInteractivePLSheet(
   writeSection(ws, row, 'Revenue', colCount);
   row++;
 
-  // Per-slot supply revenue rows (all 10 — inactive ones contribute 0)
-  // Uses IF formula on Config!apiPricingModel so changing the mode auto-recalculates
-  const apiPricingModelRef = cellMap.getScalar('config', 'apiPricingModel').toFormula();
-
+  // Per-country supply revenue rows (FX-converted)
   for (const si of SLOT_INDICES) {
-    const countryName = si < countries.length ? countries[si].name : `Country ${si + 1}`;
-    const cachedValues = si < countries.length
-      ? (plOutputs.netSupplyRevenueByCountry[si] ?? Array(NP).fill(0))
-      : Array(NP).fill(0);
+    const countryName = countries[si].name;
+    const cachedValues = plOutputs.netSupplyRevenueByCountry[si] ?? Array(NP).fill(0);
 
-    // When percentage mode: FX-convert (netSupplyRevenue / fxRate)
-    // When fixed mode: already in model currency (no FX conversion)
+    // Supply Revenue = grossSupplyRevenue / fxRate
     writeFormulaRow(ws, row, `Supply Revenue — ${countryName}`, NP, (p) => {
-      const nsRev = cellMap.get(`countryModel_${si}`, 'netSupplyRevenue', p).toFormula();
+      const gsRev = cellMap.get(`countryModel_${si}`, 'grossSupplyRevenue', p).toFormula();
       const fx = cellMap.get(`countryModel_${si}`, 'fxRate', p).toFormula();
-      return `IF(LEFT(${apiPricingModelRef},1)="P",IFERROR(${nsRev}/${fx},0),${nsRev})`;
+      return `IFERROR(${gsRev}/${fx},0)`;
     }, cachedValues, cellMap, sheetKey, `supplyRevByCountry_${si}`, NUM_FMT.integer);
     row++;
   }
 
-  // Net Supply Revenue (total across all 10 slots)
+  // Net Supply Revenue (total)
   writeFormulaRow(ws, row, 'Net Supply Revenue', NP, (p) => {
     const refs = SLOT_INDICES.map(si =>
       cellMap.get(sheetKey, `supplyRevByCountry_${si}`, p).toLocal(),
@@ -73,7 +68,7 @@ export function addInteractivePLSheet(
   }, plOutputs.totalNetSupplyRevenue, cellMap, sheetKey, 'totalNetSupplyRevenue', NUM_FMT.integer, true);
   row++;
 
-  // Royalty Income (FX-converted sum across all 10 slots)
+  // Royalty Income (FX-converted sum)
   writeFormulaRow(ws, row, 'Royalty Income', NP, (p) => {
     const refs = SLOT_INDICES.map(si => {
       const royalty = cellMap.get(`countryModel_${si}`, 'royaltyIncome', p).toFormula();
@@ -84,7 +79,7 @@ export function addInteractivePLSheet(
   }, plOutputs.totalRoyaltyIncome, cellMap, sheetKey, 'totalRoyaltyIncome', NUM_FMT.integer);
   row++;
 
-  // Milestone Income (no FX — already in model currency, sum across all 10 slots)
+  // Milestone Income (no FX)
   writeFormulaRow(ws, row, 'Milestone Income', NP, (p) => {
     const refs = SLOT_INDICES.map(si =>
       cellMap.get(`countryModel_${si}`, 'milestoneIncome', p).toFormula(),
@@ -111,39 +106,34 @@ export function addInteractivePLSheet(
   writeSection(ws, row, 'Cost of Goods Sold', colCount);
   row++;
 
-  const cogsInputMethodRef = cellMap.getScalar('config', 'cogsInputMethod').toFormula();
-  const apiCostRef = cellMap.getScalar('config', 'apiCostPerGram').toFormula();
   const apiCostPerUnitRef = cellMap.getScalar('config', 'apiCostPerUnit').toFormula();
   const cogsInflRef = cellMap.getScalar('config', 'cogsInflation').toFormula();
   const cogsOverheadRef = cellMap.getScalar('config', 'cogsOverhead').toFormula();
   const cogsMarkupRef = cellMap.getScalar('config', 'cogsMarkup').toFormula();
 
-  // COGS: aggregate grams and units across all 10 slots
+  // COGS = -(apiCostPerUnit * (1+inflation)^years * (1+overhead) * (1+markup) * totalUnits)
   writeFormulaRow(ws, row, 'COGS', NP, (p) => {
     if (p < earliestLoeIdx) return '0';
     const yearsFromLOE = p - earliestLoeIdx;
-    const gramsRefs = SLOT_INDICES.map(si =>
-      cellMap.get(`countryModel_${si}`, 'apiGramsSupplied', p).toFormula(),
-    );
-    const gramsSum = `(${gramsRefs.join('+')})`;
     const unitsRefs = SLOT_INDICES.map(si =>
       cellMap.get(`countryModel_${si}`, 'biosimilarVolume', p).toFormula(),
     );
     const unitsSum = `(${unitsRefs.join('+')})`;
     const inflFactor = `POWER(1+${cogsInflRef},${yearsFromLOE})`;
     const overheadMarkup = `(1+${cogsOverheadRef})*(1+${cogsMarkupRef})`;
-    // IF(method="perUnit", -costPerUnit*infl*OH*MU*units, -costPerGram*infl*OH*MU*grams)
-    return `IF(${cogsInputMethodRef}="Per Unit",-(${apiCostPerUnitRef}*${inflFactor}*${overheadMarkup}*${unitsSum}),-(${apiCostRef}*${inflFactor}*${overheadMarkup}*${gramsSum}))`;
+    return `-(${apiCostPerUnitRef}*${inflFactor}*${overheadMarkup}*${unitsSum})`;
   }, plOutputs.cogs, cellMap, sheetKey, 'cogs', NUM_FMT.integer);
   row++;
 
-  // Other Income
-  writeFormulaRow(ws, row, 'Other Income', NP, (p) => {
-    return cellMap.get('plAssumptions', 'otherIncome_active', p).toFormula();
-  }, plOutputs.otherIncome, cellMap, sheetKey, 'otherIncome', NUM_FMT.integer);
-  row++;
+  // Other Income — simple input row
+  {
+    const activeOtherIncome = getActiveRow(ctx.plAssumptions.otherIncome, config.activeScenario);
+    writeInputRow(ws, row, 'Other Income', activeOtherIncome,
+      NP, cellMap, sheetKey, 'otherIncome', NUM_FMT.integer);
+    row++;
+  }
 
-  // Gross Profit (includes Other Income)
+  // Gross Profit
   writeFormulaRow(ws, row, 'Gross Profit', NP, (p) => {
     const rev = cellMap.get(sheetKey, 'totalRevenue', p).toLocal();
     const cogs = cellMap.get(sheetKey, 'cogs', p).toLocal();
@@ -164,86 +154,36 @@ export function addInteractivePLSheet(
   row++;
 
   // ════════════════════════════════════════════════════════════
-  // Section: Operating Expenses
+  // Section: Operating Expenses (9 rows — simple inputs)
   // ════════════════════════════════════════════════════════════
   writeSection(ws, row, 'Operating Expenses', colCount);
   row++;
 
-  // Commercial & Sales
-  writeFormulaRow(ws, row, 'Commercial & Sales', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'commercialSales_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.commercialSales, cellMap, sheetKey, 'commercialSales', NUM_FMT.integer);
-  row++;
+  const opexCategories: Array<{ label: string; field: string; data: number[] }> = [
+    { label: 'Commercial & Sales', field: 'commercialSales', data: getActiveRow(ctx.plAssumptions.commercialSales, config.activeScenario) },
+    { label: 'G&A', field: 'gAndA', data: getActiveRow(ctx.plAssumptions.gAndA, config.activeScenario) },
+    { label: 'R&D', field: 'rAndD', data: getActiveRow(ctx.plAssumptions.rAndD, config.activeScenario) },
+    { label: 'Operations', field: 'operations', data: getActiveRow(ctx.plAssumptions.operations, config.activeScenario) },
+    { label: 'Quality', field: 'quality', data: getActiveRow(ctx.plAssumptions.quality, config.activeScenario) },
+    { label: 'Clinical', field: 'clinical', data: getActiveRow(ctx.plAssumptions.clinical, config.activeScenario) },
+    { label: 'Regulatory', field: 'regulatory', data: getActiveRow(ctx.plAssumptions.regulatory, config.activeScenario) },
+    { label: 'Pharmacovigilance', field: 'pharmacovigilance', data: getActiveRow(ctx.plAssumptions.pharmacovigilance, config.activeScenario) },
+    { label: 'Patents', field: 'patents', data: getActiveRow(ctx.plAssumptions.patents, config.activeScenario) },
+  ];
 
-  // G&A
-  writeFormulaRow(ws, row, 'G&A', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'gAndA_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.gAndA, cellMap, sheetKey, 'gAndA', NUM_FMT.integer);
-  row++;
+  // Write OpEx input rows
+  for (const cat of opexCategories) {
+    writeInputRow(ws, row, cat.label, cat.data,
+      NP, cellMap, sheetKey, `opex_${cat.field}`, NUM_FMT.integer);
+    row++;
+  }
 
-  // R&D
-  writeFormulaRow(ws, row, 'R&D', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'rAndD_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.rAndD, cellMap, sheetKey, 'rAndD', NUM_FMT.integer);
-  row++;
-
-  // Operations
-  writeFormulaRow(ws, row, 'Operations', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'operations_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.operations, cellMap, sheetKey, 'operations', NUM_FMT.integer);
-  row++;
-
-  // Quality
-  writeFormulaRow(ws, row, 'Quality', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'quality_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.quality, cellMap, sheetKey, 'quality', NUM_FMT.integer);
-  row++;
-
-  // Clinical
-  writeFormulaRow(ws, row, 'Clinical', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'clinical_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.clinical, cellMap, sheetKey, 'clinical', NUM_FMT.integer);
-  row++;
-
-  // Regulatory
-  writeFormulaRow(ws, row, 'Regulatory', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'regulatory_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.regulatory, cellMap, sheetKey, 'regulatory', NUM_FMT.integer);
-  row++;
-
-  // Pharmacovigilance
-  writeFormulaRow(ws, row, 'Pharmacovigilance', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'pharmacovigilance_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.pharmacovigilance, cellMap, sheetKey, 'pharmacovigilance', NUM_FMT.integer);
-  row++;
-
-  // Patents
-  writeFormulaRow(ws, row, 'Patents', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'patents_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.patents, cellMap, sheetKey, 'patents', NUM_FMT.integer);
-  row++;
-
-  // Total OpEx (all 9 categories)
+  // Total OpEx (formula: sum of all 9, negated)
   writeFormulaRow(ws, row, 'Total OpEx', NP, (p) => {
-    const cs = cellMap.get(sheetKey, 'commercialSales', p).toLocal();
-    const ga = cellMap.get(sheetKey, 'gAndA', p).toLocal();
-    const rd = cellMap.get(sheetKey, 'rAndD', p).toLocal();
-    const ops = cellMap.get(sheetKey, 'operations', p).toLocal();
-    const qual = cellMap.get(sheetKey, 'quality', p).toLocal();
-    const clin = cellMap.get(sheetKey, 'clinical', p).toLocal();
-    const reg = cellMap.get(sheetKey, 'regulatory', p).toLocal();
-    const pv = cellMap.get(sheetKey, 'pharmacovigilance', p).toLocal();
-    const pat = cellMap.get(sheetKey, 'patents', p).toLocal();
-    return `${cs}+${ga}+${rd}+${ops}+${qual}+${clin}+${reg}+${pv}+${pat}`;
+    const refs = opexCategories.map(cat =>
+      cellMap.get(sheetKey, `opex_${cat.field}`, p).toLocal(),
+    );
+    return `-(${refs.map(r => `ABS(${r})`).join('+')})`;
   }, plOutputs.totalOpEx, cellMap, sheetKey, 'totalOpEx', NUM_FMT.integer, true);
   row++;
 
@@ -272,18 +212,19 @@ export function addInteractivePLSheet(
   }, plOutputs.ebitdaMargin, cellMap, sheetKey, 'ebitdaMargin', NUM_FMT.percent);
   row++;
 
-  // D&A
-  writeFormulaRow(ws, row, 'D&A', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'dAndA_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.dAndA, cellMap, sheetKey, 'dAndA', NUM_FMT.integer);
-  row++;
+  // D&A (input row)
+  {
+    const activeDandA = getActiveRow(ctx.plAssumptions.dAndA, config.activeScenario);
+    writeInputRow(ws, row, 'D&A', activeDandA,
+      NP, cellMap, sheetKey, 'dAndA_input', NUM_FMT.integer);
+    row++;
+  }
 
   // EBIT
   writeFormulaRow(ws, row, 'EBIT', NP, (p) => {
     const ebitda = cellMap.get(sheetKey, 'ebitda', p).toLocal();
-    const da = cellMap.get(sheetKey, 'dAndA', p).toLocal();
-    return `${ebitda}+${da}`;
+    const da = cellMap.get(sheetKey, 'dAndA_input', p).toLocal();
+    return `${ebitda}-ABS(${da})`;
   }, plOutputs.ebit, cellMap, sheetKey, 'ebit', NUM_FMT.integer, true);
   row++;
 
@@ -295,26 +236,27 @@ export function addInteractivePLSheet(
   }, plOutputs.ebitMargin, cellMap, sheetKey, 'ebitMargin', NUM_FMT.percent);
   row++;
 
-  // Financial Costs
-  writeFormulaRow(ws, row, 'Financial Costs', NP, (p) => {
-    const ref = cellMap.get('plAssumptions', 'financialCosts_active', p).toFormula();
-    return `-ABS(${ref})`;
-  }, plOutputs.financialCosts, cellMap, sheetKey, 'financialCosts', NUM_FMT.integer);
-  row++;
+  // Financial Costs (input row)
+  {
+    const activeFinCosts = getActiveRow(ctx.plAssumptions.financialCosts, config.activeScenario);
+    writeInputRow(ws, row, 'Financial Costs', activeFinCosts,
+      NP, cellMap, sheetKey, 'financialCosts_input', NUM_FMT.integer);
+    row++;
+  }
 
-  // EBT (Earnings Before Tax)
+  // EBT
   writeFormulaRow(ws, row, 'EBT', NP, (p) => {
     const ebit = cellMap.get(sheetKey, 'ebit', p).toLocal();
-    const fc = cellMap.get(sheetKey, 'financialCosts', p).toLocal();
-    return `${ebit}+${fc}`;
+    const fc = cellMap.get(sheetKey, 'financialCosts_input', p).toLocal();
+    return `${ebit}-ABS(${fc})`;
   }, plOutputs.ebt, cellMap, sheetKey, 'ebt', NUM_FMT.integer, true);
   row++;
 
-  // Income Tax (on EBT)
+  // Income Tax (on EBT, only if positive)
+  const taxRateRef = cellMap.getScalar('config', 'taxRate').toFormula();
   writeFormulaRow(ws, row, 'Income Tax', NP, (p) => {
     const ebt = cellMap.get(sheetKey, 'ebt', p).toLocal();
-    const taxRate = cellMap.get('plAssumptions', 'taxRate_active', p).toFormula();
-    return `IF(${ebt}>0,-${ebt}*${taxRate},0)`;
+    return `IF(${ebt}>0,-${ebt}*${taxRateRef},0)`;
   }, plOutputs.incomeTax, cellMap, sheetKey, 'incomeTax', NUM_FMT.integer);
   row++;
 
@@ -354,16 +296,17 @@ export function addInteractivePLSheet(
 
   // D&A Add-Back
   writeFormulaRow(ws, row, 'D&A Add-Back', NP, (p) => {
-    const da = cellMap.get(sheetKey, 'dAndA', p).toLocal();
-    return `-${da}`;
+    const da = cellMap.get(sheetKey, 'dAndA_input', p).toLocal();
+    return `ABS(${da})`;
   }, plOutputs.dAndA.map(d => -d), cellMap, sheetKey, 'daAddBack', NUM_FMT.integer);
   row++;
 
-  // Working Capital Change (days-based automatic calculation)
+  // Working Capital Change (auto from days in Config)
+  const recvDaysRef = cellMap.getScalar('config', 'receivableDays').toFormula();
+  const payDaysRef = cellMap.getScalar('config', 'payableDays').toFormula();
+  const invDaysRef = cellMap.getScalar('config', 'inventoryDays').toFormula();
+
   writeFormulaRow(ws, row, 'Working Capital Change', NP, (p) => {
-    const recvDaysRef = cellMap.getScalar('plAssumptions', 'receivableDays').toFormula();
-    const payDaysRef = cellMap.getScalar('plAssumptions', 'payableDays').toFormula();
-    const invDaysRef = cellMap.getScalar('plAssumptions', 'inventoryDays').toFormula();
     const rev = cellMap.get(sheetKey, 'totalRevenue', p).toLocal();
     const cogsCurr = cellMap.get(sheetKey, 'cogs', p).toLocal();
     if (p === 0) {
@@ -375,10 +318,9 @@ export function addInteractivePLSheet(
   }, plOutputs.workingCapitalChange, cellMap, sheetKey, 'wcChange', NUM_FMT.integer);
   row++;
 
-  // Capital Expenditure
-  writeFormulaRow(ws, row, 'Capital Expenditure', NP, (p) => {
-    return cellMap.get('plAssumptions', 'capitalExpenditure', p).toFormula();
-  }, plOutputs.capitalExpenditure, cellMap, sheetKey, 'capex', NUM_FMT.integer);
+  // Capital Expenditure (input row)
+  writeInputRow(ws, row, 'Capital Expenditure', ctx.fcfBridge.capitalExpenditure,
+    NP, cellMap, sheetKey, 'capex', NUM_FMT.integer);
   row++;
 
   // Free Cash Flow

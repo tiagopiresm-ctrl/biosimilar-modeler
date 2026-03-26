@@ -1,45 +1,31 @@
 // ──────────────────────────────────────────────────────────────
-// Interactive Excel Export — Orchestrator (consolidated version)
+// Interactive Excel Export — Clean Standalone Financial Model
 // ──────────────────────────────────────────────────────────────
 // Generates a self-contained .xlsx with live formulas.
 // Change inputs -> outputs recalculate. No VBA.
 //
-// Sheet structure:
-//   1. Config        — model settings
-//   2. P&L Assumptions — OpEx & FCF inputs
-//   3. Inputs        — ALL country inputs in ONE sheet (stacked)
-//   4. WACC          — cost of capital
-//   5. Decision Tree — probability gates
-//   6. NPV Risk      — risk PoS per period
-//   7. Calculations  — ALL country calcs in ONE sheet (stacked)
-//   8. P&L           — consolidated P&L
-//   9. NPV Analysis  — DCF + KPIs
-//  10. KPIs          — summary dashboard
-//  11. Charts Data   — chart data tables
-//  12. PBI Data      — Power BI flat table
+// Sheet structure (7 tabs):
+//   1. Config         — model settings (key-value pairs + country table)
+//   2. Inputs         — per-country input assumptions (active countries only)
+//   3. Calculations   — per-country formula-based calculations
+//   4. P&L            — consolidated P&L with OpEx inputs + FCF
+//   5. NPV Analysis   — DCF + KPIs
+//   6. Charts Data    — chart data tables
+//   7. KPIs           — summary dashboard
 
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
 import type { ExportContext } from '../exportTypes';
 import { CellMap } from './cellMap';
 
-// Input sheet builders
+// Sheet builders
 import { addInteractiveConfigSheet } from './sheets/configSheet';
-import { addInteractivePLAssumptionsSheet } from './sheets/plAssumptionsSheet';
 import { addConsolidatedInputSheet } from './sheets/countryInputSheet';
-import { addInteractiveWACCSheet } from './sheets/waccSheet';
-import { addInteractiveDecisionTreeSheet } from './sheets/decisionTreeSheet';
-import { addInteractiveNPVRiskSheet } from './sheets/npvRiskSheet';
-
-// Output sheet builders (formula-only)
 import { addConsolidatedCalculationsSheet, CALCULATIONS_SHEET_NAME } from './sheets/countryModelSheet';
 import { addInteractivePLSheet } from './sheets/plSheet';
 import { addInteractiveNPVSheet } from './sheets/npvSheet';
 import { addInteractiveKPIsSheet } from './sheets/kpisSheet';
 import { addChartsDataSheet } from './sheets/chartsSheet';
-
-// Power BI sheets
-import { addPBIDataSheet } from './sheets/pbiDataSheet';
 
 /**
  * Generate and download an interactive Excel workbook with live formulas.
@@ -53,30 +39,25 @@ export async function exportInteractiveExcel(ctx: ExportContext): Promise<void> 
 
   const cellMap = new CellMap();
 
-  // ── Phase 1: Input sheets (register cell addresses) ──
+  // ── Phase 1: Config + Inputs (register cell addresses) ──
   addInteractiveConfigSheet(wb, ctx, cellMap);
-  addInteractivePLAssumptionsSheet(wb, ctx, cellMap);
-  addConsolidatedInputSheet(wb, ctx, cellMap);     // ONE consolidated Inputs sheet
-  addInteractiveWACCSheet(wb, ctx, cellMap);
-  addInteractiveDecisionTreeSheet(wb, ctx, cellMap);
-  addInteractiveNPVRiskSheet(wb, ctx, cellMap);
+  addConsolidatedInputSheet(wb, ctx, cellMap);
 
-  // ── Phase 2: Output sheets (read CellMap to build formulas) ──
-  addConsolidatedCalculationsSheet(wb, ctx, cellMap);  // ONE consolidated Calculations sheet
+  // ── Phase 2: Calculations + P&L (formulas referencing inputs) ──
+  addConsolidatedCalculationsSheet(wb, ctx, cellMap);
   addInteractivePLSheet(wb, ctx, cellMap);
+
+  // ── Phase 3: NPV Analysis ──
   addInteractiveNPVSheet(wb, ctx, cellMap);
-  addInteractiveKPIsSheet(wb, ctx, cellMap);
+
+  // ── Phase 4: Charts Data + KPIs ──
   addChartsDataSheet(wb, ctx, cellMap);
+  addInteractiveKPIsSheet(wb, ctx, cellMap);
 
-  // ── Phase 3: Power BI sheets ──
-  addPBIDataSheet(wb, ctx);
-
-  // ── Phase 4: Protect output sheets ──
+  // ── Phase 5: Protect output sheets ──
   const outputSheetNames = [
     CALCULATIONS_SHEET_NAME,
-    'P&L',
     'NPV Analysis',
-    'KPIs',
   ];
 
   for (const name of outputSheetNames) {
