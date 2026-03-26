@@ -242,21 +242,18 @@ function buildCountryModelSheet(
   }, co?.apiGramsSupplied ?? zeroArr, cellMap, sheetKey, 'apiGramsSupplied', NUM_FMT.decimal2);
   row++;
 
-  // 22. API Price/Gram
-  if (ctx.config.apiPricingModel === 'percentage') {
-    writeFormulaRow(ws, row, 'API Price/Gram', NP, (p) => {
-      if (p < launchIdx) return '0';
-      const partnerNS = cellMap.get(sheetKey, 'partnerNetSales', p).toLocal();
-      const vol = cellMap.get(sheetKey, 'biosimilarVolume', p).toLocal();
-      const supplyPct = cellMap.get(inputKey, 'supplyPricePct_active', p).toFormula();
-      return guard(`IFERROR(${partnerNS}/(${vol}/${unitsPerGramRef})*${supplyPct},0)`);
-    }, co?.apiPricePerGram ?? zeroArr, cellMap, sheetKey, 'apiPricePerGram', NUM_FMT.decimal2);
-  } else {
-    writeFormulaRow(ws, row, 'API Price/Gram', NP, (p) => {
-      if (p < launchIdx) return '0';
-      return guard(cellMap.get(inputKey, 'fixedSupplyPricePerGram_active', p).toFormula());
-    }, co?.apiPricePerGram ?? zeroArr, cellMap, sheetKey, 'apiPricePerGram', NUM_FMT.decimal2);
-  }
+  // 22. API Price/Gram — switches on Config!apiPricingModel
+  const apiPricingModelRef = cellMap.getScalar('config', 'apiPricingModel').toFormula();
+
+  writeFormulaRow(ws, row, 'API Price/Gram', NP, (p) => {
+    if (p < launchIdx) return '0';
+    const partnerNS = cellMap.get(sheetKey, 'partnerNetSales', p).toLocal();
+    const vol = cellMap.get(sheetKey, 'biosimilarVolume', p).toLocal();
+    const supplyPct = cellMap.get(inputKey, 'supplyPricePct_active', p).toFormula();
+    const fixedPrice = cellMap.get(inputKey, 'fixedSupplyPricePerGram_active', p).toFormula();
+    const pctFormula = `IFERROR(${partnerNS}/(${vol}/${unitsPerGramRef})*${supplyPct},0)`;
+    return guard(`IF(LEFT(${apiPricingModelRef},1)="P",${pctFormula},${fixedPrice})`);
+  }, co?.apiPricePerGram ?? zeroArr, cellMap, sheetKey, 'apiPricePerGram', NUM_FMT.decimal2);
   row++;
 
   // 23. Gross Supply Revenue

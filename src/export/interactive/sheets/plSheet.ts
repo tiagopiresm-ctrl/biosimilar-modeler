@@ -27,7 +27,7 @@ export function addInteractivePLSheet(
 ): void {
   const ws = wb.addWorksheet('P&L');
   const sheetKey = 'pl';
-  const { countries, plOutputs, config, periodLabels, periodConfig } = ctx;
+  const { countries, plOutputs, periodLabels, periodConfig } = ctx;
 
   const NP = periodLabels.length;
   const colCount = NP + 1;
@@ -45,25 +45,22 @@ export function addInteractivePLSheet(
   row++;
 
   // Per-slot supply revenue rows (all 10 — inactive ones contribute 0)
+  // Uses IF formula on Config!apiPricingModel so changing the mode auto-recalculates
+  const apiPricingModelRef = cellMap.getScalar('config', 'apiPricingModel').toFormula();
+
   for (const si of SLOT_INDICES) {
     const countryName = si < countries.length ? countries[si].name : `Country ${si + 1}`;
     const cachedValues = si < countries.length
       ? (plOutputs.netSupplyRevenueByCountry[si] ?? Array(NP).fill(0))
       : Array(NP).fill(0);
 
-    if (config.apiPricingModel === 'percentage') {
-      // FX-convert: netSupplyRevenue / fxRate
-      writeFormulaRow(ws, row, `Supply Revenue — ${countryName}`, NP, (p) => {
-        const nsRev = cellMap.get(`countryModel_${si}`, 'netSupplyRevenue', p).toFormula();
-        const fx = cellMap.get(`countryModel_${si}`, 'fxRate', p).toFormula();
-        return `IFERROR(${nsRev}/${fx},0)`;
-      }, cachedValues, cellMap, sheetKey, `supplyRevByCountry_${si}`, NUM_FMT.integer);
-    } else {
-      // Fixed mode — already in model currency
-      writeFormulaRow(ws, row, `Supply Revenue — ${countryName}`, NP, (p) => {
-        return cellMap.get(`countryModel_${si}`, 'netSupplyRevenue', p).toFormula();
-      }, cachedValues, cellMap, sheetKey, `supplyRevByCountry_${si}`, NUM_FMT.integer);
-    }
+    // When percentage mode: FX-convert (netSupplyRevenue / fxRate)
+    // When fixed mode: already in model currency (no FX conversion)
+    writeFormulaRow(ws, row, `Supply Revenue — ${countryName}`, NP, (p) => {
+      const nsRev = cellMap.get(`countryModel_${si}`, 'netSupplyRevenue', p).toFormula();
+      const fx = cellMap.get(`countryModel_${si}`, 'fxRate', p).toFormula();
+      return `IF(LEFT(${apiPricingModelRef},1)="P",IFERROR(${nsRev}/${fx},0),${nsRev})`;
+    }, cachedValues, cellMap, sheetKey, `supplyRevByCountry_${si}`, NUM_FMT.integer);
     row++;
   }
 
