@@ -6,7 +6,7 @@
 // formulas can reliably reference any field by slot + offset.
 //
 // KEY CHANGES from old per-sheet approach:
-//   - Market Volume forecast periods are FORMULAS: =prev*(1+growth)
+//   - Molecule Volume forecast periods are FORMULAS: =prev*(1+growth)
 //   - Originator Price forecast periods are FORMULAS: =prev*(1+priceGrowth)
 //   - Royalty mode dropdown lives here per country
 //   - All mode switches use Excel IF(), never TypeScript if/else
@@ -61,7 +61,7 @@ const FIELD_OFFSETS = {
   // FX section
   fxSection: 4,
   fxRate: 5,                 // 1 row
-  // Market Volume section
+  // Molecule Volume section
   mvSection: 6,
   marketVolume: 7,           // 1 row (direct input / formula)
   volumeGrowth: 8,           // scenario block: 4 rows (8,9,10,11)
@@ -200,17 +200,17 @@ function buildCountrySlot(
   }
 
   // ═══════════════════════════════════════════════════════════
-  // Market Volume — with FORMULA-based forecast
+  // Molecule Volume — with FORMULA-based forecast
   // ═══════════════════════════════════════════════════════════
   {
     const sectionRow = base + FIELD_OFFSETS.mvSection;
-    writeSection(ws, sectionRow, 'Market Volume', colCount);
+    writeSection(ws, sectionRow, 'Molecule Volume', colCount);
   }
-  // Market Volume row: historical = editable, forecast = formula =prev*(1+growth)
+  // Molecule Volume row: historical = editable, forecast = formula =prev*(1+growth)
   {
     const row = base + FIELD_OFFSETS.marketVolume;
     const mvLabel = ws.getCell(row, 1);
-    mvLabel.value = 'Market Volume';
+    mvLabel.value = 'Molecule Volume';
     mvLabel.font = BOLD_VALUE_FONT;
 
     // We need to write volume growth FIRST conceptually, but we know its row position

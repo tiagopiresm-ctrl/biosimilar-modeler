@@ -127,7 +127,7 @@ export function addInteractiveConfigSheet(
   };
 
   // Row 7: Scenario Mode
-  writeKV(7, 'Scenario Mode', config.scenarioMode);
+  writeKV(7, 'Scenario Mode', config.scenarioMode === 'three_scenario' ? 'Three Scenario' : 'Base Only');
   ws.getCell(7, 2).dataValidation = {
     type: 'list',
     allowBlank: false,
@@ -164,7 +164,7 @@ export function addInteractiveConfigSheet(
   section(15, 'API Economics');
 
   // Row 16: API Pricing Model
-  writeKV(16, 'API Pricing Model', config.apiPricingModel);
+  writeKV(16, 'API Pricing Model', config.apiPricingModel === 'percentage' ? 'Percentage of Partner Net Price' : 'Fixed Price per Gram');
   cellMap.registerScalar('config', 'apiPricingModel', 'Config', 'B16');
   ws.getCell(16, 2).dataValidation = {
     type: 'list',
@@ -176,12 +176,12 @@ export function addInteractiveConfigSheet(
   };
 
   // Row 17: COGS Input Method
-  writeKV(17, 'COGS Input Method', config.cogsInputMethod ?? 'perGram');
+  writeKV(17, 'COGS Input Method', (config.cogsInputMethod ?? 'perGram') === 'perGram' ? 'Per Gram' : 'Per Unit');
   cellMap.registerScalar('config', 'cogsInputMethod', 'Config', 'B17');
   ws.getCell(17, 2).dataValidation = {
     type: 'list',
     allowBlank: false,
-    formulae: ['"perGram,perUnit"'],
+    formulae: ['"Per Gram,Per Unit"'],
     showErrorMessage: true,
     errorTitle: 'Invalid',
     error: 'Please select from the dropdown',
@@ -221,7 +221,7 @@ export function addInteractiveConfigSheet(
   section(26, 'Volume Forecast');
 
   // Row 27: Forecast Method
-  writeKV(27, 'Forecast Method', config.volumeForecastMethod);
+  writeKV(27, 'Forecast Method', config.volumeForecastMethod === 'growth' ? 'Growth % YoY' : 'ATC Market Share %');
   ws.getCell(27, 2).dataValidation = {
     type: 'list',
     allowBlank: false,
@@ -232,11 +232,12 @@ export function addInteractiveConfigSheet(
   };
 
   // Row 28: Volume Multiplier
-  writeKV(28, 'Volume Multiplier', config.volumeMultiplier);
+  writeKV(28, 'Volume Multiplier',
+    config.volumeMultiplier === 'none' ? 'None' : config.volumeMultiplier === 'thousand' ? 'Thousand' : 'Million');
   ws.getCell(28, 2).dataValidation = {
     type: 'list',
     allowBlank: false,
-    formulae: ['"none,thousand,million"'],
+    formulae: ['"None,Thousand,Million"'],
     showErrorMessage: true,
     errorTitle: 'Invalid',
     error: 'Please select from the dropdown',

@@ -80,7 +80,7 @@ export function addPBIGuideSheet(wb: Workbook): void {
   addStep('Costs', 'COGS, Commercial & Sales, G&A, R&D, Total OpEx');
   addStep('Earnings', 'Gross Profit, EBITDA, D&A, EBIT, Financial Costs, EBT, Income Tax, Net Income');
   addStep('Cash Flow', 'D&A Add-Back, Working Capital Change, CapEx, Free Cash Flow, Cumulative FCF');
-  addStep('Market', 'Market Volume, Originator Share, Biosimilar Share, Biosimilar Volume, In-Market Sales');
+  addStep('Market', 'Molecule Volume, Originator Share, Biosimilar Share, Biosimilar Volume, In-Market Sales');
   addStep('NPV', 'Discount Factor, Discounted FCF, Cumulative Discounted FCF, Risk-Adjusted FCF');
   addStep('KPI', 'NPV, rNPV, IRR, rIRR, Money at Risk, WACC, Cumulative PoS, ENPV');
   row++;
@@ -200,7 +200,7 @@ export function addPBIGuideSheet(wb: Workbook): void {
   addStep('Layout', 'Stacked area chart (top) + line chart (bottom)');
   addStep('Stacked Area', 'Axis = Period, Values = Originator Share, Biosimilar Share, Generic Share');
   addStep('How', 'Filter: Category = "Market", Country = first country. Use % values');
-  addStep('Line Chart', 'Axis = Period, Values = Market Volume, Biosimilar Volume');
+  addStep('Line Chart', 'Axis = Period, Values = Molecule Volume, Biosimilar Volume');
   addStep('Slicer', 'Add Country slicer to switch between markets');
   addStep('Tip', 'Shows how market share evolves from 100% originator to biosimilar penetration');
   row++;

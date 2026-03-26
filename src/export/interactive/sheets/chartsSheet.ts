@@ -154,7 +154,7 @@ export function addChartsDataSheet(
     row++;
   };
 
-  writeAggregateRow('Total Market Volume', 'marketVolume', totalMarketVolume, NUM_FMT.integer, true);
+  writeAggregateRow('Total Molecule Volume', 'marketVolume', totalMarketVolume, NUM_FMT.integer, true);
   writeAggregateRow('Originator Volume', 'originatorVolume', totalOriginatorVolume, NUM_FMT.integer);
   writeAggregateRow('Total Biosimilar Volume', 'totalBiosimilarVolume', totalBiosimilarVolume, NUM_FMT.integer);
   writeAggregateRow('Our Product Volume', 'biosimilarVolume', ourProductVolume, NUM_FMT.integer);

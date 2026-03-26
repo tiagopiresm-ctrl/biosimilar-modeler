@@ -42,7 +42,7 @@ export function addPBIDataSheet(wb: Workbook, ctx: ExportContext): void {
       const push = (category: string, metric: string, value: number) =>
         rows.push({ country: c.name, period, category, metric, value });
 
-      push('Market', 'Market Volume', co.marketVolume[p]);
+      push('Market', 'Molecule Volume', co.marketVolume[p]);
       push('Market', 'Originator Ref Price', co.originatorRefPrice[p]);
       push('Market', 'Originator Share %', co.originatorShare[p]);
       push('Market', 'Total Generic Share %', co.totalGenericShare[p]);

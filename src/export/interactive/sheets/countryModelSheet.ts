@@ -112,10 +112,10 @@ function buildCalcSlot(
   // ════════════════════════════════════════════════════════════
   writeSection(ws, base + CALC_OFFSETS.sectionMarket, `Country ${slotIndex + 1} Calculations`, colCount);
 
-  // 1. Market Volume — reference from consolidated Inputs sheet (already has formulas)
+  // 1. Molecule Volume — reference from consolidated Inputs sheet (already has formulas)
   {
     const row = base + CALC_OFFSETS.marketVolume;
-    writeFormulaRow(ws, row, 'Market Volume', NP, (p) => {
+    writeFormulaRow(ws, row, 'Molecule Volume', NP, (p) => {
       return guard(cellMap.get(inputKey, 'marketVolume', p).toFormula());
     }, co?.marketVolume ?? zeroArr, cellMap, sheetKey, 'marketVolume', NUM_FMT.integer, true);
   }

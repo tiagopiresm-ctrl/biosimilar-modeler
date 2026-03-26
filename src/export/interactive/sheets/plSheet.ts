@@ -133,7 +133,7 @@ export function addInteractivePLSheet(
     const inflFactor = `POWER(1+${cogsInflRef},${yearsFromLOE})`;
     const overheadMarkup = `(1+${cogsOverheadRef})*(1+${cogsMarkupRef})`;
     // IF(method="perUnit", -costPerUnit*infl*OH*MU*units, -costPerGram*infl*OH*MU*grams)
-    return `IF(${cogsInputMethodRef}="perUnit",-(${apiCostPerUnitRef}*${inflFactor}*${overheadMarkup}*${unitsSum}),-(${apiCostRef}*${inflFactor}*${overheadMarkup}*${gramsSum}))`;
+    return `IF(${cogsInputMethodRef}="Per Unit",-(${apiCostPerUnitRef}*${inflFactor}*${overheadMarkup}*${unitsSum}),-(${apiCostRef}*${inflFactor}*${overheadMarkup}*${gramsSum}))`;
   }, plOutputs.cogs, cellMap, sheetKey, 'cogs', NUM_FMT.integer);
   row++;
 
