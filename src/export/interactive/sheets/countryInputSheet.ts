@@ -37,8 +37,9 @@ export const INPUTS_SHEET_NAME = 'Inputs';
 /**
  * Fixed number of rows allocated per country slot.
  * Must be large enough to hold all fields including partner view costs + padding.
+ * Layout: 61 rows of content + 1 gap row = 62.
  */
-export const ROWS_PER_INPUT_SLOT = 65;
+export const ROWS_PER_INPUT_SLOT = 62;
 
 /** First data row for slot 0 (after header rows). */
 export const INPUT_SLOT_START = 4;
@@ -56,34 +57,34 @@ const FIELD_OFFSETS = {
   title: 0,
   // Country Settings section
   settingsSection: 2,
-  biosimLaunchIdx: 3,
+  biosimLaunchIdx: 3,        // 1 row
   // FX section
-  fxSection: 5,
-  fxRate: 6,
+  fxSection: 4,
+  fxRate: 5,                 // 1 row
   // Market Volume section
-  mvSection: 8,
-  marketVolume: 9,
-  volumeGrowth: 10,       // scenario block starts here (up to 4 rows)
-  // Originator Pricing section (offset after volume growth block)
-  opSection: 16,
-  originatorPrice: 17,
-  priceGrowth: 18,         // scenario block (up to 4 rows)
+  mvSection: 6,
+  marketVolume: 7,           // 1 row (direct input / formula)
+  volumeGrowth: 8,           // scenario block: 4 rows (8,9,10,11)
+  // Originator Pricing section
+  opSection: 12,
+  originatorPrice: 13,       // 1 row
+  priceGrowth: 14,           // scenario block: 4 rows (14,15,16,17)
   // Biosimilar Assumptions section
-  bioSection: 24,
-  biosimilarPenetration: 25,  // scenario block
-  ourShareOfBiosimilar: 31,   // scenario block
-  biosimilarPricePct: 37,     // scenario block
+  bioSection: 18,
+  biosimilarPenetration: 19, // scenario block: 4 rows (19,20,21,22)
+  ourShareOfBiosimilar: 23,  // scenario block: 4 rows (23,24,25,26)
+  biosimilarPricePct: 27,    // scenario block: 4 rows (27,28,29,30)
   // Partner Economics section
-  partnerSection: 43,
-  partnerGtnPct: 44,          // scenario block
-  supplyPricePct: 50,
-  fixedSupplyPricePerGram: 51,
-  royaltyRatePct: 52,
-  milestonePayments: 53,
+  partnerSection: 31,
+  partnerGtnPct: 32,         // scenario block: 4 rows (32,33,34,35)
+  supplyPricePct: 36,        // scenario block: 4 rows (36,37,38,39)
+  fixedSupplyPricePerGram: 40, // scenario block: 4 rows (40,41,42,43)
+  royaltyRatePct: 44,        // scenario block: 4 rows (44,45,46,47)
+  milestonePayments: 48,     // 1 row
   // Royalty Structure section
-  royaltySection: 55,
-  royaltyMode: 56,
-  royaltyTiersStart: 57,     // 5 tiers x 2 rows = 10 rows
+  royaltySection: 49,
+  royaltyMode: 50,           // 1 row
+  royaltyTiersStart: 51,     // 5 tiers x 2 rows = 10 rows (51-60)
 } as const;
 
 // ── Helpers ──
@@ -350,29 +351,32 @@ function buildCountrySlot(
       NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
     );
   }
-  // Supply Price % (single row — used when mode=percentage)
+  // Supply Price % (scenario block — used when mode=percentage)
   {
     const row = base + FIELD_OFFSETS.supplyPricePct;
-    const data = country?.supplyPricePct ?? zeroScenario;
-    const activeData = [data.bear, data.base, data.bull][activeIdx];
-    writeInputRow(ws, row, 'Supply Price %',
-      activeData, NP, cellMap, sheetKey, 'supplyPricePct_active', NUM_FMT.percent);
+    sb(
+      ws, row, 'Supply Price %', country?.supplyPricePct ?? zeroScenario,
+      NP, cellMap, sheetKey, 'supplyPricePct',
+      NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
+    );
   }
-  // Fixed Supply Price/Gram (single row — used when mode=fixed)
+  // Fixed Supply Price/Gram (scenario block — used when mode=fixed)
   {
     const row = base + FIELD_OFFSETS.fixedSupplyPricePerGram;
-    const data = country?.fixedSupplyPricePerGram ?? zeroScenario;
-    const activeData = [data.bear, data.base, data.bull][activeIdx];
-    writeInputRow(ws, row, 'Fixed Supply Price/Gram',
-      activeData, NP, cellMap, sheetKey, 'fixedSupplyPricePerGram_active', NUM_FMT.decimal2);
+    sb(
+      ws, row, 'Fixed Supply Price/Gram', country?.fixedSupplyPricePerGram ?? zeroScenario,
+      NP, cellMap, sheetKey, 'fixedSupplyPricePerGram',
+      NUM_FMT.decimal2, ACTIVE_SCENARIO_REF, activeIdx,
+    );
   }
-  // Royalty Rate % (single row — used when mode=flat)
+  // Royalty Rate % (scenario block — used when mode=flat)
   {
     const row = base + FIELD_OFFSETS.royaltyRatePct;
-    const data = country?.royaltyRatePct ?? zeroScenario;
-    const activeData = [data.bear, data.base, data.bull][activeIdx];
-    writeInputRow(ws, row, 'Royalty Rate %',
-      activeData, NP, cellMap, sheetKey, 'royaltyRatePct_active', NUM_FMT.percent);
+    sb(
+      ws, row, 'Royalty Rate %', country?.royaltyRatePct ?? zeroScenario,
+      NP, cellMap, sheetKey, 'royaltyRatePct',
+      NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
+    );
   }
   // Milestone Payments
   {
