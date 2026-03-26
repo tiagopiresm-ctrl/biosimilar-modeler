@@ -187,6 +187,48 @@ export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): v
     });
   });
 
+  // ── Mini volume forecast bar chart (template chart #2) ──────
+  // Template positions: title y=6.15", bars y=6.27"–6.63", year labels y=6.73"
+  const volTitleY = 6.15;
+  slide.addText("mAbx Volume forecast, '000 units", {
+    x: 0.75, y: volTitleY, w: 3.50, h: 0.16,
+    fontSize: FS_MINI, fontFace: FONT, bold: true, color: LABEL_NAVY,
+  });
+
+  // Aggregate biosimilar volume across all countries for each key period
+  const volValues = keyIdx.map(i =>
+    countryOutputs.reduce((sum, co) => sum + (co.biosimilarVolume[i] ?? 0), 0),
+  );
+  const volMaxVal = Math.max(...volValues, 1);
+
+  const volBarTopY = 6.27;
+  const volBarBotY = 6.63;
+  const volBarMaxH = volBarBotY - volBarTopY; // 0.36"
+  const volLabelY  = 6.73;
+
+  barLabels.forEach((lbl, i) => {
+    const val = volValues[i];
+    const bH = Math.max(0.04, (val / volMaxVal) * volBarMaxH);
+    const bX = barChartX + i * barSpacing;
+    const bY = volBarBotY - bH;
+
+    // Bar rect (teal fill, same as sales chart)
+    slide.addShape('rect', {
+      x: bX, y: bY, w: barW, h: bH,
+      fill: { color: TEAL },
+    });
+    // Value label above bar (5pt bold #003366)
+    slide.addText(formatNumber(val), {
+      x: bX, y: bY - 0.14, w: barW, h: 0.12,
+      fontSize: FS_MICRO, fontFace: FONT, bold: true, color: LABEL_NAVY, align: 'center',
+    });
+    // Year label below bar (5pt #666666)
+    slide.addText(lbl, {
+      x: bX, y: volLabelY, w: barW, h: 0.12,
+      fontSize: FS_MICRO, fontFace: FONT, color: GRAY, align: 'center',
+    });
+  });
+
   // ════════════════════════════════════════════════════════════
   // RIGHT COLUMN (x: 6.70 .. 12.70)
   // ════════════════════════════════════════════════════════════

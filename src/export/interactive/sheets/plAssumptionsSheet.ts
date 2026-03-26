@@ -11,6 +11,7 @@ import {
   setupSheet, writePeriodHeader, writeSection,
   writeScenarioBlock, writeBaseOnlyBlock,
   writeInputRow, writeColorLegend,
+  INPUT_FILL, INPUT_FONT,
 } from '../formulaHelpers';
 import { NUM_FMT } from '../../excelStyles';
 
@@ -132,7 +133,8 @@ export function addInteractivePLAssumptionsSheet(
     ws.getCell(row, 1).font = { size: 10 };
     ws.getCell(row, 2).value = d.value;
     ws.getCell(row, 2).numFmt = NUM_FMT.integer;
-    ws.getCell(row, 2).font = { size: 10, color: { argb: '0000CC' } };
+    ws.getCell(row, 2).fill = INPUT_FILL;
+    ws.getCell(row, 2).font = INPUT_FONT;
     cellMap.registerScalar(sheetKey, d.field, 'P&L Assumptions', ws.getCell(row, 2).address);
     row++;
   }

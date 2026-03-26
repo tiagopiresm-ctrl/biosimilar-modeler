@@ -12,7 +12,7 @@
 import type { Workbook, Worksheet } from 'exceljs';
 import type { ExportContext } from '../../exportTypes';
 import type { CellMap } from '../cellMap';
-import type { CountryAssumptions, GenericCompetitor, ScenarioRow } from '../../../types';
+import type { CountryAssumptions, ScenarioRow } from '../../../types';
 import { NUM_FMT } from '../../excelStyles';
 import {
   INPUT_FILL, INPUT_FONT, OUTPUT_FILL,
@@ -395,44 +395,6 @@ function buildCountryInputSheet(
     row++;
   }
 
-  // ════════════════════════════════════════════════════════════
-  // Section: Generic Competitors
-  // ════════════════════════════════════════════════════════════
-  const generics = country?.genericCompetitors ?? [];
-  if (generics.length > 0) {
-    writeSection(ws, row, 'Generic Competitors', colCount);
-    row++;
-
-    generics.forEach((generic: GenericCompetitor, i: number) => {
-      // Sub-section header
-      writeSection(ws, row, `Generic ${i + 1}: ${generic.name}`, colCount);
-      row++;
-
-      // Register scalar: launch period index
-      writeScalarRow(
-        ws, row, `  Launch Period Index`,
-        generic.launchPeriodIndex, cellMap, sheetKey,
-        `generic_${i}_launchPeriod`, NUM_FMT.integer,
-      );
-      row++;
-
-      // Generic Market Share (scenario block)
-      const genShare = sb(
-        ws, row, `Generic ${i + 1} Market Share`, generic.marketShare,
-        NP, cellMap, sheetKey, `generic_${i}_marketShare`,
-        NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
-      );
-      row = genShare.nextRow;
-
-      // Generic Price % (scenario block)
-      const genPrice = sb(
-        ws, row, `Generic ${i + 1} Price %`, generic.pricePct,
-        NP, cellMap, sheetKey, `generic_${i}_pricePct`,
-        NUM_FMT.percent, ACTIVE_SCENARIO_REF, activeIdx,
-      );
-      row = genPrice.nextRow;
-    });
-  }
 }
 
 // ── Exported entry point ──
