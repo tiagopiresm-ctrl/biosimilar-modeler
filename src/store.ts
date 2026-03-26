@@ -3,7 +3,6 @@
 // ============================================================
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 import type {
   ModelState,
@@ -241,7 +240,6 @@ function flattenToBase(state: ModelState): Partial<ModelState> {
 // ---- The Store ----
 
 export const useStore = create<ModelState & StoreActions>()(
-  persist(
     (set, get) => ({
       // ---- Initial state ----
       ...createInitialState(),
@@ -634,12 +632,6 @@ export const useStore = create<ModelState & StoreActions>()(
         }
       },
     }),
-    {
-      name: 'biosimilar-model-storage',
-      version: CURRENT_MODEL_VERSION,
-      migrate: (persisted, version) => migrateState(persisted, version),
-    },
-  ),
 );
 
 // Re-export helpers that UI components may need
