@@ -19,9 +19,12 @@ import { formatNumber, formatPercent, formatCurrency } from '../../calculations'
 import {
   applyLayout, addSectionBox, addVerticalAccent, addFootnote,
   MARGIN_X, CONTENT_TOP,
+  LEFT_COL_W, RIGHT_COL_X, RIGHT_COL_W,
+  LABEL_X, LABEL_W, VALUE_X, VALUE_W,
+  ROW_H, ROW_SPACING,
   NAVY, TEAL_BLUE, TEAL,
   LABEL_NAVY, VALUE_GRAY, GRAY,
-  FONT, FS_LABEL, FS_SMALL, FS_MINI, FS_KPI_VAL,
+  FONT, FS_LABEL, FS_SMALL, FS_MINI, FS_KPI_VAL, FS_MICRO,
 } from './slideLayout';
 
 export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): void {
@@ -38,21 +41,21 @@ export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): v
   // LEFT COLUMN (x: 0.60 .. ~5.90)    — template positions
   // ════════════════════════════════════════════════════════════
   const leftX = MARGIN_X;   // 0.60"
-  const leftW = 5.70;       // matches template
-  let curY = CONTENT_TOP;   // 1.15"
+  const leftW = LEFT_COL_W; // 5.40"
+  let curY = CONTENT_TOP;   // 1.17"
 
   // ── Section: Main Characteristics ──────────────────────────
   addSectionBox(slide, leftX, curY, leftW, 0.35, 'Main Characteristics');
   curY += 0.45;
 
-  // Vertical accent bar (0.04" wide, navy-teal, left edge)
+  // Vertical accent bar (0.04" wide, navy #1F4E79, left edge)
   const barX = 0.75;
   const barStartY = curY;
-  const kvX = 0.95;   // labels start at 0.95"
-  const kvValX = 3.15; // values start at 3.15"
-  const kvLabelW = kvValX - kvX;  // ~2.20"
-  const kvValW = 3.00;
-  const rowH = 0.31;  // vertical spacing between rows
+  const kvX = LABEL_X;      // 0.95"
+  const kvValX = VALUE_X;   // 3.15"
+  const kvLabelW = LABEL_W; // 2.20"
+  const kvValW = VALUE_W;   // 3.00"
+  const rowH = ROW_SPACING; // 0.31" vertical spacing between rows
 
   // LOE years string
   const loeStr = countries.map(c => `${c.name}: ${c.loeYear}`).join('  |  ');
@@ -74,11 +77,11 @@ export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): v
   mainKVs.forEach(([label, value], i) => {
     const y = curY + i * rowH;
     slide.addText(label, {
-      x: kvX, y, w: kvLabelW, h: 0.26,
+      x: kvX, y, w: kvLabelW, h: ROW_H,
       fontSize: FS_LABEL, fontFace: FONT, bold: true, color: LABEL_NAVY,
     });
     slide.addText(value, {
-      x: kvValX, y, w: kvValW, h: 0.26,
+      x: kvValX, y, w: kvValW, h: ROW_H,
       fontSize: FS_LABEL, fontFace: FONT, color: VALUE_GRAY,
     });
   });
@@ -153,10 +156,10 @@ export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): v
 
   // Draw simple mini-bar chart with text shapes (matching template style)
   const barChartX = 0.75;
-  const barChartW = 4.96;  // ~8 bars * 0.62"
+  const barChartW = 4.96;  // ~8 bars
   const barMaxH = 0.35;
   const barW = Math.min(0.55, barChartW / barLabels.length - 0.08);
-  const barSpacing = barChartW / barLabels.length;
+  const barSpacing = Math.max(0.63, barChartW / barLabels.length);
   const maxVal = Math.max(...barValues, 1);
 
   const barBaseY = curY + barMaxH + 0.15;
@@ -172,23 +175,23 @@ export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): v
       x: bX, y: bY, w: barW, h: bH,
       fill: { color: TEAL },
     });
-    // Value label above bar
+    // Value label above bar (5pt bold #003366)
     slide.addText(formatNumber(val), {
       x: bX, y: bY - 0.14, w: barW, h: 0.12,
-      fontSize: 6, fontFace: FONT, color: VALUE_GRAY, align: 'center',
+      fontSize: FS_MICRO, fontFace: FONT, bold: true, color: LABEL_NAVY, align: 'center',
     });
-    // Year label below bar
+    // Year label below bar (5pt #666666)
     slide.addText(lbl, {
       x: bX, y: barBaseY + 0.02, w: barW, h: 0.12,
-      fontSize: 6, fontFace: FONT, color: VALUE_GRAY, align: 'center',
+      fontSize: FS_MICRO, fontFace: FONT, color: GRAY, align: 'center',
     });
   });
 
   // ════════════════════════════════════════════════════════════
   // RIGHT COLUMN (x: 6.70 .. 12.70)
   // ════════════════════════════════════════════════════════════
-  const rightX = 6.70;
-  const rightW = 6.00;
+  const rightX = RIGHT_COL_X;  // 6.70"
+  const rightW = RIGHT_COL_W;  // 5.70"
   let rightY = CONTENT_TOP;
 
   // ── Section: High Level Timeline ───────────────────────────
@@ -215,7 +218,7 @@ export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): v
     });
     slide.addText(yr, {
       x: bx, y: rightY + 0.01, w: yearBlockW, h: 0.20,
-      fontSize: 7, fontFace: FONT, bold: true, color: 'FFFFFF',
+      fontSize: FS_MINI, fontFace: FONT, bold: true, color: 'FFFFFF',
       align: 'center',
     });
   });
@@ -234,10 +237,10 @@ export function addMoleculeSnapshotSlide(pptx: PptxGenJS, ctx: ExportContext): v
   const phaseBarW = [1.15, 1.15, 0.92, 1.53, 1.15];
 
   phases.forEach((phase, i) => {
-    // Phase label
+    // Phase label (6pt = FS_TINY for phase labels)
     slide.addText(phase, {
       x: rightX, y: rightY, w: 1.10, h: 0.35,
-      fontSize: 7, fontFace: FONT, color: VALUE_GRAY, wrap: true,
+      fontSize: 6, fontFace: FONT, color: VALUE_GRAY, wrap: true,
     });
     // Phase bar (staggered offset to show sequence)
     const barOffset = i * 0.77;

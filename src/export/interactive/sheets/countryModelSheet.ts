@@ -374,22 +374,32 @@ function buildCountryModelSheet(
   }, co?.royaltyIncome ?? zeroArr, cellMap, sheetKey, 'royaltyFlat', NUM_FMT.integer);
   row++;
 
-  // 25b. Royalty Income (tiered — cumulative per-country PNS, ratchet logic via marginal tiers)
+  // 25a2. Cumulative Partner Net Sales (needed for tiered royalty lookup)
+  writeFormulaRow(ws, row, 'Cumulative Partner Net Sales', NP, (p) => {
+    const pns = cellMap.get(sheetKey, 'partnerNetSales', p).toLocal();
+    if (p === 0) return guard(pns);
+    const prev = cellMap.get(sheetKey, 'cumulativePNS', p - 1).toLocal();
+    return guard(`${prev}+${pns}`);
+  }, co?.partnerNetSales
+    ? co.partnerNetSales.reduce<number[]>((acc, v, i) => { acc.push((acc[i - 1] ?? 0) + v); return acc; }, [])
+    : zeroArr,
+  cellMap, sheetKey, 'cumulativePNS', NUM_FMT.integer);
+  row++;
+
+  // 25b. Royalty Income (tiered — cumulative PNS ratchet: lookup tier rate from cumulative PNS, apply to annual PNS)
+  // Matches calculations.ts: accumulate PNS, find highest tier whose threshold <= cumulative PNS, apply that rate to annual PNS
   writeFormulaRow(ws, row, 'Royalty (Tiered)', NP, (p) => {
     const partnerNS = cellMap.get(sheetKey, 'partnerNetSales', p).toLocal();
-    // Build marginal tier formula using per-country tier thresholds and rates
-    const tierFormulas: string[] = [];
+    const cumPNS = cellMap.get(sheetKey, 'cumulativePNS', p).toLocal();
+    // Build nested IF to find the highest tier rate for which cumPNS >= threshold
+    // IF(cumPNS>=T5, R5, IF(cumPNS>=T4, R4, IF(cumPNS>=T3, R3, IF(cumPNS>=T2, R2, IF(cumPNS>=T1, R1, 0)))))
+    let formula = '0';
     for (let t = 0; t < 5; t++) {
       const threshRef = cellMap.getScalar(inputKey, `royaltyTier_${t}_threshold`).toFormula();
       const rateRef = cellMap.getScalar(inputKey, `royaltyTier_${t}_rate`).toFormula();
-      if (t === 0) {
-        tierFormulas.push(`MIN(${partnerNS},${threshRef})*${rateRef}`);
-      } else {
-        const prevThreshRef = cellMap.getScalar(inputKey, `royaltyTier_${t - 1}_threshold`).toFormula();
-        tierFormulas.push(`MAX(0,MIN(${partnerNS},${threshRef})-${prevThreshRef})*${rateRef}`);
-      }
+      formula = `IF(${cumPNS}>=${threshRef},${rateRef},${formula})`;
     }
-    return guard(tierFormulas.join('+'));
+    return guard(`${partnerNS}*(${formula})`);
   }, co?.royaltyIncome ?? zeroArr, cellMap, sheetKey, 'royaltyTiered', NUM_FMT.integer);
   row++;
 

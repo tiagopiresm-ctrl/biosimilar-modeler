@@ -10,23 +10,24 @@
 import type PptxGenJS from 'pptxgenjs';
 
 // ── Template colour palette (extracted from template XML) ────
-export const NAVY       = '003366';   // header bar, footer bar, accent
-export const DARK_BLUE  = '1F4E79';   // legacy alias — avoid in new code
-export const TEAL_BLUE  = '1A5C8A';   // vertical bar, subtitle, some bars
-export const MID_BLUE   = '2E75B6';   // legacy compat
+export const NAVY       = '003366';   // labels, headers, footer bar
+export const DARK_BLUE  = '1F4E79';   // header bar fill, vertical accent bar
+export const HEADER_BG  = '1F4E79';   // header bar fill (dark blue)
+export const TEAL_BLUE  = '1A5C8A';   // subtitle text
+export const MID_BLUE   = '2E75B6';   // accent line below header
 export const SKY_BLUE   = '5B9BD5';   // secondary chart colour
 export const LIGHT_SKY  = '7FBFDB';   // tertiary chart colour
-export const PALE_BLUE  = 'B8CCE4';   // accent line, quaternary chart
-export const SECTION_BG = 'E8EFF5';   // section header box fill
+export const PALE_BLUE  = 'B8CCE4';   // quaternary chart
+export const SECTION_BG = 'D6E4F0';   // section box fill (light blue)
 export const ACCENT_BLUE = 'D6E4F0';  // legacy alias for KPI cards
 export const TEAL       = '17A2B8';   // chart accent
-export const GREEN      = '28A745';   // go/proceed badge
+export const GREEN      = '28A745';   // LOE markers / go badge
 export const YELLOW_BG  = 'FFFFE0';   // caution banner
 export const WHITE      = 'FFFFFF';
 export const BLACK      = '000000';
 export const LABEL_NAVY = '003366';   // label text colour
 export const VALUE_GRAY = '333333';   // value text colour
-export const GRAY       = '666666';   // footnote / muted
+export const GRAY       = '666666';   // footnotes / muted
 export const LIGHT_GRAY = 'F2F2F2';   // row stripe
 export const BORDER_GRAY = 'D9D9D9';
 export const FOOTER_GRAY = 'BFBFBF';
@@ -42,8 +43,8 @@ export const HEADER_H = 0.85;
 export const ACCENT_LINE_H = 0.04;
 // Subtitle line: y ~0.92"
 export const SUBTITLE_Y = 0.92;
-// Content starts at y ~1.15"
-export const CONTENT_TOP = 1.15;
+// Content starts at y ~1.17"
+export const CONTENT_TOP = 1.17;
 
 // Footer bar: y=7.05", h=0.45"
 export const FOOTER_Y = 7.05;
@@ -57,16 +58,29 @@ export const CONTENT_W = SLIDE_W - 2 * MARGIN_X;  // ~12.133"
 export const FONT = 'Calibri';
 
 // Font sizes (pt) from template
-export const FS_TITLE    = 28;   // header title
-export const FS_SECTION  = 14;   // section header label
+export const FS_TITLE    = 28;   // slide title
+export const FS_SECTION  = 14;   // section header
 export const FS_SUBTITLE =  9;   // subtitle / footer
-export const FS_LABEL    =  9;   // label:  bold #003366
-export const FS_VALUE    =  9;   // value:  regular #333333
-export const FS_SMALL    =  8;   // KPI label / smaller items
-export const FS_MINI     =  7;   // chart sub-header / small bar labels
-export const FS_FOOTNOTE =  6;   // footnote row
-export const FS_TABLE    =  8;   // table cell default
-export const FS_KPI_VAL  = 10;   // KPI big value (e.g. "Program costs: $135M")
+export const FS_LABEL    =  9;   // labels and values (body text)
+export const FS_VALUE    =  9;   // value text (= FS_LABEL)
+export const FS_SMALL    =  8;   // market outlook KV pairs
+export const FS_MINI     =  7;   // mini labels, footnotes, year headers
+export const FS_FOOTNOTE =  6;   // phase labels, footnotes (FS_TINY)
+export const FS_TABLE    =  8;   // table cells
+export const FS_KPI_VAL  = 10;   // KPI big value
+export const FS_MICRO    =  5;   // bar chart labels, milestone markers
+
+// ── Layout measurements (inches) ────────────────────────────
+export const HEADER_Y     = 0.15;   // title text y
+export const LEFT_COL_W   = 5.40;   // left column width (section boxes)
+export const RIGHT_COL_X  = 6.70;   // right column x start
+export const RIGHT_COL_W  = 5.70;   // right column width
+export const LABEL_X      = 0.95;   // label text x (indented from section)
+export const LABEL_W      = 2.20;   // label width
+export const VALUE_X      = 3.15;   // value text x
+export const VALUE_W      = 3.00;   // value width
+export const ROW_H        = 0.26;   // height of each KV pair row
+export const ROW_SPACING  = 0.31;   // vertical distance between rows (y increment)
 
 /**
  * Apply the standard template chrome to a slide:
@@ -82,20 +96,20 @@ export function applyLayout(
   // ── Header bar ────────────────────────────────────────────
   slide.addShape('rect', {
     x: 0, y: 0, w: SLIDE_W, h: HEADER_H,
-    fill: { color: NAVY },
+    fill: { color: HEADER_BG },
   });
 
   // Title text inside header (x=0.60", y=0.15", 28pt bold white)
   slide.addText(title, {
-    x: MARGIN_X, y: 0.15, w: CONTENT_W, h: 0.60,
+    x: MARGIN_X, y: HEADER_Y, w: CONTENT_W, h: 0.60,
     fontSize: FS_TITLE, fontFace: FONT, bold: true, color: WHITE,
     valign: 'middle',
   });
 
-  // ── Accent line ───────────────────────────────────────────
+  // ── Accent line (#2E75B6) ───────────────────────────────
   slide.addShape('rect', {
     x: 0, y: HEADER_H, w: SLIDE_W, h: ACCENT_LINE_H,
-    fill: { color: PALE_BLUE },
+    fill: { color: MID_BLUE },
   });
 
   // ── Subtitle (optional) ───────────────────────────────────
@@ -112,9 +126,9 @@ export function applyLayout(
     fill: { color: NAVY },
   });
 
-  slide.addText('Mabxience  |  Business Intelligence  |  Confidential', {
+  slide.addText('Mabxience | Business Intelligence | Confidential', {
     x: 0.50, y: FOOTER_Y + 0.03, w: SLIDE_W - 1.0, h: FOOTER_H - 0.06,
-    fontSize: FS_SUBTITLE, fontFace: FONT, italic: true, color: WHITE,
+    fontSize: FS_MINI, fontFace: FONT, italic: true, color: WHITE,
     valign: 'middle',
   });
 }
@@ -157,7 +171,7 @@ export function addVerticalAccent(
 ): void {
   slide.addShape('rect', {
     x, y, w: 0.04, h,
-    fill: { color: TEAL_BLUE },
+    fill: { color: DARK_BLUE },
   });
 }
 
